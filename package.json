@@ -1,6 +1,7 @@
 {
   "name": "@openoba/erdl-mcp",
   "version": "1.0.0-alpha.1",
+  "type": "module",
   "description": "ERDL rules as an MCP Server — deterministic rules that give your Agent muscle memory",
   "keywords": [
     "mcp",
