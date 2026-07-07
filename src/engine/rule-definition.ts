@@ -191,3 +191,14 @@ export interface SimulateResult {
   matched: boolean
   matchedRules: RuleMatch[]
 }
+
+// ============================================
+// Agent Identity (ERDL Protocol Spec)
+// ============================================
+
+export interface AgentIdentity {
+  /** Agent role: guardian (enforces rules) or observed (subject to rules) */
+  role: AgentRole
+  /** IDs of agents this guardian observes */
+  observes?: string[]
+}

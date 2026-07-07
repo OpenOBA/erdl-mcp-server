@@ -16,7 +16,7 @@ import * as yaml from 'js-yaml'
 import { compileWhen } from './erdl-expr-parser.js'
 import { PRESET_YAML_CODING, PRESET_YAML_WRITING, PRESET_YAML_DESIGN } from '../config/presets.js'
 import { PRESET_YAML_ENGINEERING } from '../config/presets-engineering.js'
-import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator } from './rule-definition.js'
+import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator, AgentIdentity } from './rule-definition.js'
 
 // ============================================
 // Types
@@ -47,7 +47,8 @@ interface YamlRule {
 }
 
 interface YamlFile {
-  rules?: YamlRule[]
+  rules?: YamlRule[] | Record<string, unknown>
+  agent?: { role?: string; observes?: string[] }
 }
 
 // ============================================
@@ -58,6 +59,7 @@ export class RuleStore {
   private rules = new Map<string, RuleDefinition>()
   private watcher: fs.FSWatcher | null = null
   private onChangeCallback: (() => void) | null = null
+  private agentIdentity: AgentIdentity = { role: 'observed' }
 
   /** Get the rules directory path */
   static getRulesDir(): string {
@@ -151,6 +153,16 @@ export class RuleStore {
   /** Get rule count */
   count(): number {
     return this.rules.size
+  }
+
+  /** Get agent identity */
+  getAgentIdentity(): AgentIdentity {
+    return this.agentIdentity
+  }
+
+  /** Check if this agent is a guardian */
+  isGuardian(): boolean {
+    return this.agentIdentity.role === 'guardian'
   }
 
   /** Increment hit count for a rule */
