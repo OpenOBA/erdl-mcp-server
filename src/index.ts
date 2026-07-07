@@ -15,6 +15,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
+import * as http from 'node:http'
 
 import { ruleStore } from './engine/rule-store.js'
 import { evaluateToolDef, evaluateHandler } from './tools/evaluate.js'
@@ -102,8 +103,13 @@ export async function main(): Promise<void> {
   await server.connect(transport)
 
   console.error(`[erdl-mcp] 🧠 ERDL MCP Server v1.0.0-alpha.1 started`)
+  console.error(`[erdl-mcp] 👤 Role: ${ruleStore.getAgentIdentity().role} | Ring: ${ruleStore.isGuardian() ? 0 : 3}`)
   console.error(`[erdl-mcp] 📁 Rules: ${ruleStore.count()} loaded from ~/.openoba/rules/`)
   console.error(`[erdl-mcp] 🔧 Tools: ${TOOLS.map((t) => t.def.name).join(', ')}`)
+
+  // 7. Start HTTP dashboard API
+  startDashboardApi()
+
   console.error(`[erdl-mcp] ✅ Ready for Agent connections`)
 }
 
@@ -112,3 +118,28 @@ main().catch((err) => {
   console.error('[erdl-mcp] Fatal error:', err instanceof Error ? err.message : String(err))
   process.exit(1)
 })
+
+function startDashboardApi(): void {
+  const server = http.createServer((_req, res) => {
+    if (_req.url === '/api/rules') {
+      const rules = ruleStore.getAll().map((r) => ({
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        priority: r.priority,
+        override: r.override ?? false,
+        decision: r.action.decision,
+        description: r.description,
+      }))
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' })
+      res.end(JSON.stringify({ rules, total: rules.length }))
+      return
+    }
+    res.writeHead(404)
+    res.end('Not found')
+  })
+
+  server.listen(18790, '127.0.0.1', () => {
+    console.error('[erdl-mcp] 📊 Dashboard API: http://127.0.0.1:18790/api/rules')
+  })
+}
