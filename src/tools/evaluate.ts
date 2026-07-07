@@ -63,7 +63,7 @@ export async function evaluateHandler(args: { intent: string; context?: Record<s
       content: [
         {
           type: 'text' as const,
-          text: `PASS: No matching rules for "${args.intent}".\n(${result.totalEvaluated} rules evaluated, none matched)`,
+          text: `🔵 PASS: No rules matched for "${args.intent}". (${result.totalEvaluated} rules checked)`,
         },
       ],
       structuredContent: {
@@ -85,7 +85,7 @@ export async function evaluateHandler(args: { intent: string; context?: Record<s
       content: [
         {
           type: 'text' as const,
-          text: `DENY: Action blocked by rules.\n\n${rulesSummary}\n\nDo NOT proceed. Present the reason to the user.`,
+          text: `🛑 DENY: Blocked by rules.\\n\\n${rulesSummary}\\n\\nDo NOT proceed.`,
         },
       ],
       structuredContent: {
@@ -136,7 +136,7 @@ export async function evaluateHandler(args: { intent: string; context?: Record<s
     content: [
       {
         type: 'text' as const,
-        text: `ALLOW: Action permitted with instructions.\n\nRules matched: ${result.matchedRules.map((r) => r.ruleId).join(', ')}\n\nInstructions:\n${summary}`,
+        text: `✅ ALLOW: Rule check passed.\\n\\nRules: ${result.matchedRules.map((r) => r.ruleId).join(', ')}\\n\\n${summary}`,
       },
     ],
     structuredContent: {
