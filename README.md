@@ -130,6 +130,14 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 
 ---
 
+## Documentation
+
+- **[Tool API Reference](docs/tool-api-reference.md)** — Full input/output schemas for all 5 tools
+- **[Rule File Format](docs/tool-api-reference.md#rule-file-format)** — YAML schema for custom rules
+- **[GitHub](https://github.com/openoba/erdl-mcp-server)** — Source code + issues
+
+---
+
 ## First-Run Experience
 
 On first launch, `erdl-mcp` auto-deploys 20 preset rules to `~/.openoba/rules/`:
