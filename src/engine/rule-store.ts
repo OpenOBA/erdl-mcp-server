@@ -76,6 +76,9 @@ export class RuleStore {
       console.error(`[erdl-mcp] Created rules directory: ${dir}`)
     }
 
+    // Deploy preset rules on first run (if directory is empty)
+    await this.deployPresets(dir)
+
     const loaded = this.loadFromDir(dir)
 
     // Start watching for changes
@@ -83,6 +86,52 @@ export class RuleStore {
 
     console.error(`[erdl-mcp] Loaded ${loaded} rules from ${dir}`)
     return loaded
+  }
+
+  /**
+   * Deploy preset rules to the rules directory on first run.
+   * Creates coding/, writing/, design/ subdirectories with YAML files.
+   * Does NOT overwrite existing files.
+   */
+  private async deployPresets(dir: string): Promise<void> {
+    const existing = this.scanYamlFiles(dir)
+    if (existing.length > 0) {
+      console.error(`[erdl-mcp] Found ${existing.length} existing rule files, skipping preset deployment`)
+      return
+    }
+
+    console.error('[erdl-mcp] First run detected. Deploying 20 preset rules...')
+
+    try {
+      const { allCodingRules } = await import('../presets/coding/all.js')
+      const { allWritingRules } = await import('../presets/writing/all.js')
+      const { allDesignRules } = await import('../presets/design/all.js')
+
+      const categories: Array<{ name: string; rules: RuleDefinition[] }> = [
+        { name: 'coding', rules: allCodingRules },
+        { name: 'writing', rules: allWritingRules },
+        { name: 'design', rules: allDesignRules },
+      ]
+
+      for (const { name, rules } of categories) {
+        const catDir = path.join(dir, name)
+        if (!fs.existsSync(catDir)) {
+          fs.mkdirSync(catDir, { recursive: true })
+        }
+
+        const yamlContent = yaml.dump({ rules: rules.map((r) => this.ruleToYaml(r)) }, {
+          indent: 2,
+          lineWidth: 120,
+          noRefs: true,
+        })
+
+        const filePath = path.join(catDir, 'openoba-presets.yaml')
+        fs.writeFileSync(filePath, yamlContent, 'utf-8')
+        console.error(`[erdl-mcp] Deployed ${rules.length} ${name} rules to ${filePath}`)
+      }
+    } catch (err) {
+      console.error('[erdl-mcp] Failed to deploy preset rules:', err instanceof Error ? err.message : String(err))
+    }
   }
 
   /** Reload all rules (called on file change) */

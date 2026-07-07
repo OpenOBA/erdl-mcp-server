@@ -130,6 +130,21 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 
 ---
 
+## First-Run Experience
+
+On first launch, `erdl-mcp` auto-deploys 20 preset rules to `~/.openoba/rules/`:
+
+```
+~/.openoba/rules/
+├── coding/openoba-presets.yaml   (10 rules)
+├── writing/openoba-presets.yaml  (7 rules)
+├── design/openoba-presets.yaml   (3 rules)
+```
+
+Your Agent immediately starts checking them. No setup. No training.
+
+---
+
 ## License
 
 MIT · OpenOBA · [openoba.com](https://openoba.com)
