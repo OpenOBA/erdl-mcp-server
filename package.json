@@ -1,0 +1,61 @@
+{
+  "name": "@openoba/erdl-mcp",
+  "version": "1.0.0-alpha.1",
+  "description": "ERDL rules as an MCP Server — deterministic rules that give your Agent muscle memory",
+  "keywords": [
+    "mcp",
+    "erdl",
+    "rules-engine",
+    "ai-agent",
+    "openoba",
+    "model-context-protocol"
+  ],
+  "license": "MIT",
+  "author": "OpenOBA <support@openoba.com>",
+  "homepage": "https://openoba.com/erdl-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openoba/erdl-mcp-server.git"
+  },
+  "bin": {
+    "erdl-mcp": "./bin/erdl-mcp.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "rules/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node bin/erdl-mcp.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/ test/ --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "quality": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "prepublishOnly": "npm run quality",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "@types/js-yaml": "^4.0.0",
+    "vitest": "^2.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "prettier": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
