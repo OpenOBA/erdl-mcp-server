@@ -13,6 +13,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import * as yaml from 'js-yaml'
+import { compileWhen } from './erdl-expr-parser.js'
 import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator } from './rule-definition.js'
 
 // ============================================
@@ -359,7 +360,6 @@ export class RuleStore {
 
     // Try compileWhen first (standard ERDL Spec operators)
     try {
-      const { compileWhen } = require('./erdl-expr-parser.js') as { compileWhen: (s: string) => Record<string, unknown> }
       const ast = compileWhen(expr)
       if (ast.conditions && Array.isArray(ast.conditions)) {
         return (ast.conditions as Array<Record<string, unknown>>).map((c) => ({
