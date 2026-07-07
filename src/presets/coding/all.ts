@@ -92,7 +92,7 @@ export const typescriptRules: RuleDefinition[] = [
     description: 'Nested ternary operators are unreadable. Use if/else or extract to a function.',
     category: 'coding',
     triggers: ['write_code', 'output_code'],
-    conditions: [{ kind: 'intent_contains', keywords: ['typescript', 'javascript', 'condition', 'ternary', 'inline'] }],
+    conditions: [{ kind: 'intent_contains', keywords: ['ternary', 'nested ternary', 'inline if', 'conditional expression', '?:'] }],
     action: {
       decision: 'ALLOW',
       instruction:
@@ -167,7 +167,7 @@ export const dependenciesRules: RuleDefinition[] = [
     category: 'coding',
     triggers: ['write_code', 'add_dependency', 'install_package'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['install', 'add', 'dependency', 'npm install', 'pip install', 'cargo add', 'yarn add', 'pnpm add', 'bun add'] },
+      { kind: 'intent_contains', keywords: ['npm install', 'pip install', 'cargo add', 'yarn add', 'pnpm add', 'bun add', 'gem install', 'composer require', 'new dependency', 'add dependency'] },
     ],
     action: {
       decision: 'DENY',
@@ -186,7 +186,7 @@ export const dependenciesRules: RuleDefinition[] = [
     category: 'coding',
     triggers: ['write_code', 'add_dependency', 'install_package'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['install', 'add', 'dependency', 'package', 'library', 'need'] },
+      { kind: 'intent_contains', keywords: ['add package', 'install package', 'add library', 'new library', 'need a library', 'need a package'] },
     ],
     action: {
       decision: 'ALLOW',

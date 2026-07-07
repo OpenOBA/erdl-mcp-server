@@ -18,7 +18,7 @@ export const toneRules: RuleDefinition[] = [
     category: 'writing',
     triggers: ['write_content', 'write_blog', 'write_post', 'write_article', 'write_tweet'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['write', 'blog', 'post', 'article', 'tweet', 'content', '文案', '文章'] },
+      { kind: 'intent_contains', keywords: ['write blog', 'write post', 'write article', 'write tweet', 'write content', '写文章', '写文案', 'blog post', 'newsletter'] },
     ],
     action: {
       decision: 'ALLOW',
@@ -37,7 +37,7 @@ export const toneRules: RuleDefinition[] = [
     category: 'writing',
     triggers: ['write_content', 'write_blog', 'write_post'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['write', 'blog', 'post', 'article', 'content'] },
+      { kind: 'intent_contains', keywords: ['write blog', 'write post', 'write article', 'write content', 'write copy', 'write marketing'] },
     ],
     action: {
       decision: 'ALLOW',
@@ -56,7 +56,7 @@ export const toneRules: RuleDefinition[] = [
     category: 'writing',
     triggers: ['write_content', 'write_blog'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['write', 'blog', 'article', 'long', 'content'] },
+      { kind: 'intent_contains', keywords: ['write blog', 'write article', 'write long', 'long-form', 'blog post'] },
     ],
     action: {
       decision: 'ALLOW',
@@ -75,7 +75,7 @@ export const toneRules: RuleDefinition[] = [
     category: 'writing',
     triggers: ['write_content', 'write_blog', 'write_post', 'write_article'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['write', 'content', '文案', '宣传'] },
+      { kind: 'intent_contains', keywords: ['write content', 'write blog', 'write marketing', 'write copy', '写文案', '写宣传'] },
     ],
     action: {
       decision: 'ALLOW',
@@ -97,7 +97,7 @@ export const formattingRules: RuleDefinition[] = [
     category: 'writing',
     triggers: ['write_content', 'write_blog', 'write_post'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['中文', 'Chinese', 'write', 'content', '文案', '文章'] },
+      { kind: 'intent_contains', keywords: ['中文', 'Chinese', 'write chinese', '中文内容', '中文文章', 'Chinese content'] },
     ],
     action: {
       decision: 'ALLOW',
@@ -116,7 +116,7 @@ export const formattingRules: RuleDefinition[] = [
     category: 'writing',
     triggers: ['write_content', 'write_blog', 'write_document'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['write', 'document', 'article', 'markdown', 'heading'] },
+      { kind: 'intent_contains', keywords: ['write document', 'write markdown', 'write article', 'documentation', 'readme'] },
     ],
     action: {
       decision: 'ALLOW',
@@ -135,7 +135,7 @@ export const formattingRules: RuleDefinition[] = [
     category: 'writing',
     triggers: ['write_content', 'write_blog'],
     conditions: [
-      { kind: 'intent_contains', keywords: ['list', 'bullet', 'bullet list', 'items', 'write'] },
+      { kind: 'intent_contains', keywords: ['bullet list', 'numbered list', 'checklist', 'write list', 'format list'] },
     ],
     action: {
       decision: 'ALLOW',
