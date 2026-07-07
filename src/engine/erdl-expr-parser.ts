@@ -63,7 +63,7 @@ export interface ERDLV2Document {
 // Expression Tokenizer
 // ═══════════════════════════════════════════
 
-type TokenKind = 'identifier' | 'number' | 'string' | 'operator' | 'lparen' | 'rparen' | 'comma' | 'kw_and' | 'kw_or' | 'kw_not' | 'kw_in' | 'kw_not_in' | 'kw_exists' | 'kw_not_exists'
+type TokenKind = 'identifier' | 'number' | 'string' | 'operator' | 'lparen' | 'rparen' | 'comma' | 'kw_and' | 'kw_or' | 'kw_not' | 'kw_in' | 'kw_not_in' | 'kw_exists' | 'kw_not_exists' | 'kw_contains' | 'kw_not_contains' | 'kw_match'
 
 interface Token {
   kind: TokenKind
@@ -141,6 +141,8 @@ function tokenizeWhen(expr: string): Token[] {
       else if (upper === 'NOT') tokens.push({ kind: 'kw_not', value: word, pos: i })
       else if (upper === 'IN') tokens.push({ kind: 'kw_in', value: word, pos: i })
       else if (upper === 'EXISTS') tokens.push({ kind: 'kw_exists', value: word, pos: i })
+      else if (upper === 'CONTAINS') tokens.push({ kind: 'kw_contains', value: word, pos: i })
+      else if (upper === 'MATCH') tokens.push({ kind: 'kw_match', value: word, pos: i })
       else tokens.push({ kind: 'identifier', value: word, pos: i })
       i = j
       continue
@@ -334,7 +336,7 @@ class ExpressionCompiler {
     const left = this.parseOperand()
     const op = this.peek()
     if (!op) throw new Error(`Unexpected end of expression after ${left}`)
-    if (op.kind !== 'operator' && op.kind !== 'kw_in' && op.kind !== 'kw_not_in' && op.kind !== 'kw_not') {
+    if (op.kind !== 'operator' && op.kind !== 'kw_in' && op.kind !== 'kw_not_in' && op.kind !== 'kw_not' && op.kind !== 'kw_contains' && op.kind !== 'kw_match') {
       throw new Error(`Expected operator, got ${op.kind} at position ${op.pos}`)
     }
     const opKind = op.kind
@@ -392,6 +394,28 @@ class ExpressionCompiler {
           field: String(left),
           operator: opKind === 'kw_in' ? 'in' : 'not_in',
           value: values,
+        }],
+      }
+    }
+
+    if (opKind === 'kw_contains') {
+      const right = this.parseOperand()
+      return {
+        conditions: [{
+          field: String(left),
+          operator: 'contains',
+          value: right,
+        }],
+      }
+    }
+
+    if (opKind === 'kw_match') {
+      const right = this.parseOperand()
+      return {
+        conditions: [{
+          field: String(left),
+          operator: 'match',
+          value: right,
         }],
       }
     }

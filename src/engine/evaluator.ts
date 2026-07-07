@@ -9,6 +9,9 @@
  */
 
 import type { RuleDefinition, RuleCondition, EvaluationResult, RuleMatch } from './rule-definition.js'
+import { SafeExpr } from './safe-expr.js'
+
+const safeExpr = new SafeExpr()
 
 export class Evaluator {
   evaluate(
@@ -172,13 +175,32 @@ export class Evaluator {
 
     const raw = this.resolveField(field, context)
 
+    // Build a numeric context for SafeExpr arithmetic evaluation
+    const numCtx: Record<string, number> = {}
+    if (typeof raw === 'number') numCtx[field] = raw
+    for (const [k, v] of Object.entries(context)) {
+      if (typeof v === 'number') numCtx[k] = v
+    }
+
     switch (operator) {
       case 'eq': return raw === cond.value
       case 'ne': return raw !== cond.value
-      case 'gt': return Number(raw) > Number(cond.value)
-      case 'gte': return Number(raw) >= Number(cond.value)
-      case 'lt': return Number(raw) < Number(cond.value)
-      case 'lte': return Number(raw) <= Number(cond.value)
+      case 'gt': {
+        if (typeof raw === 'number' && typeof cond.value === 'number') return raw > (cond.value as number)
+        return safeExpr.evaluate(`${field} > ${cond.value}`, numCtx) > 0
+      }
+      case 'gte': {
+        if (typeof raw === 'number' && typeof cond.value === 'number') return raw >= (cond.value as number)
+        return safeExpr.evaluate(`${field} >= ${cond.value}`, numCtx) > 0
+      }
+      case 'lt': {
+        if (typeof raw === 'number' && typeof cond.value === 'number') return raw < (cond.value as number)
+        return safeExpr.evaluate(`${field} < ${cond.value}`, numCtx) > 0
+      }
+      case 'lte': {
+        if (typeof raw === 'number' && typeof cond.value === 'number') return raw <= (cond.value as number)
+        return safeExpr.evaluate(`${field} <= ${cond.value}`, numCtx) > 0
+      }
       case 'in':
         return Array.isArray(cond.value) && (cond.value as unknown[]).includes(raw)
       case 'not_in':

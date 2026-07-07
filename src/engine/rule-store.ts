@@ -1,10 +1,10 @@
 /**
- * ERDL MCP Server — Rule Store
+ * ERDL MCP Server 閳?Rule Store
  *
  * Loads rules from file system, watches for changes, tracks hit counts.
  * Uses ~/.openoba/rules/ as the rules directory.
  *
- * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
+ * @author 閸炴劖鏃﹂悞?(Tang Haoran) 璺?OpenOBA AI 閹笛嗩攽鐎?
  * @since 2026-07-07
  * @license MIT
  */
@@ -315,7 +315,7 @@ export class RuleStore {
    * rules:
    *   no_any:
    *     when: language = "typescript" AND output_text contains "any"
-   *     then: BLOCK "不要使用 any 类型"
+   *     then: BLOCK "娑撳秷顩︽担璺ㄦ暏 any 缁鐎?
    */
   private parseSpecRule(ruleId: string, raw: Record<string, unknown>, _sourceFile: string): RuleDefinition | null {
     if (!ruleId) return null
@@ -325,10 +325,10 @@ export class RuleStore {
     const whenExpr = (raw.when as string) ?? ''
     const thenExpr = (raw.then as string) ?? ''
 
-    // Parse when → conditions[]
+    // Parse when 閳?conditions[]
     const conditions: RuleCondition[] = this.parseWhenExpression(whenExpr)
 
-    // Parse then → action
+    // Parse then 閳?action
     const action = this.parseThenExpression(thenExpr)
 
     return {
@@ -348,7 +348,7 @@ export class RuleStore {
   }
 
   /**
-   * Parse when expression → RuleCondition[]
+   * Parse when expression 閳?RuleCondition[]
    *
    * Supports ERDL Spec operators + extensions:
    *   field = "value" | field != "value" | field in ("a","b")
@@ -358,7 +358,6 @@ export class RuleStore {
   private parseWhenExpression(expr: string): RuleCondition[] {
     if (!expr || expr === 'true') return []
 
-    // Try compileWhen first (standard ERDL Spec operators)
     try {
       const ast = compileWhen(expr)
       if (ast.conditions && Array.isArray(ast.conditions)) {
@@ -369,82 +368,11 @@ export class RuleStore {
           operator: mapSpecOp(c.operator as string),
         }))
       }
-    } catch {
-      // Fall through to simple parser for Agent-specific operators (contains, match)
+    } catch (err) {
+      console.error(`[erdl-mcp] Failed to compile when expression: ${expr}`, err instanceof Error ? err.message : String(err))
     }
 
-    return this.parseWhenSimple(expr)
-  }
-
-  /** Simple when expression parser for Agent extensions (contains, match) */
-  private parseWhenSimple(expr: string): RuleCondition[] {
-    // Split top-level AND (outside parens)
-    const parts = this.splitByLogic(expr, /\s+AND\s+/i)
-    if (parts.length > 1) return parts.flatMap((p) => this.parseWhenSimple(p))
-
-    // Handle single OR group
-    const orParts = this.splitByLogic(expr, /\s+OR\s+/i)
-    if (orParts.length > 1) return orParts.flatMap((p) => this.parseWhenSimple(p))
-
-    return [this.parseSingleWhen(expr.trim())].filter(Boolean) as RuleCondition[]
-  }
-
-  private parseSingleWhen(s: string): RuleCondition | null {
-    s = s.trim()
-    if (s.startsWith('(') && s.endsWith(')')) s = s.slice(1, -1).trim()
-
-    // Handle NOT
-    let negate = false
-    if (/^NOT\s+/i.test(s)) { negate = true; s = s.replace(/^NOT\s+/i, '').trim() }
-
-    // field contains "value"
-    const containsMatch = s.match(/^(\w+)\s+contains\s+(.+)$/)
-    if (containsMatch) {
-      return { kind: 'context_matches', field: containsMatch[1], value: unquote(containsMatch[2]), operator: negate ? 'not_contains' : 'contains' }
-    }
-
-    // field match "regex"
-    const matchMatch = s.match(/^(\w+)\s+match\s+(.+)$/)
-    if (matchMatch) {
-      return { kind: 'context_matches', field: matchMatch[1], value: unquote(matchMatch[2]), operator: negate ? 'not_contains' : 'match' }
-    }
-
-    // field = "value"
-    const eqMatch = s.match(/^(\w+)\s+(=|!=|>=|<=|>|<)\s+(.+)$/)
-    if (eqMatch) {
-      const op = negate ? negateOp(eqMatch[2]) : eqMatch[2]
-      return { kind: 'context_matches', field: eqMatch[1], value: unquote(eqMatch[3]), operator: mapSpecOp(op) }
-    }
-
-    // field in ("v1", "v2")
-    const inMatch = s.match(/^(\w+)\s+(not_?)?in\s+\((.+)\)$/i)
-    if (inMatch) {
-      const vals = inMatch[3].split(',').map((v) => unquote(v.trim()))
-      const op = negate || inMatch[2] ? 'not_in' : 'in'
-      return { kind: 'context_matches', field: inMatch[1], value: vals as unknown[], operator: op }
-    }
-
-    return null
-  }
-
-  private splitByLogic(expr: string, sep: RegExp): string[] {
-    const parts: string[] = []
-    let depth = 0; let start = 0
-    for (let i = 0; i < expr.length; i++) {
-      if (expr[i] === '(') depth++
-      else if (expr[i] === ')') depth--
-      if (depth === 0) {
-        const substr = expr.slice(i)
-        const m = substr.match(sep)
-        if (m && m.index === 0) {
-          parts.push(expr.slice(start, i).trim())
-          i += m[0].length - 1
-          start = i + 1
-        }
-      }
-    }
-    parts.push(expr.slice(start).trim())
-    return parts.filter((p) => p.length > 0)
+    return []
   }
 
   private parseThenExpression(expr: string): RuleAction {
@@ -519,16 +447,6 @@ export const ruleStore = new RuleStore()
 // Helper functions
 // ============================================
 
-function unquote(s: string): unknown {
-  s = s.trim()
-  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-    return s.slice(1, -1)
-  }
-  if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s)
-  if (s === 'true') return true
-  if (s === 'false') return false
-  return s
-}
 
 function mapSpecOp(op: string): ConditionOperator {
   const map: Record<string, ConditionOperator> = {
@@ -546,12 +464,3 @@ function mapSpecOp(op: string): ConditionOperator {
   return map[op] ?? 'eq'
 }
 
-function negateOp(op: string): string {
-  const n: Record<string, string> = {
-    'eq': 'ne', 'ne': 'eq', '=': 'ne', '!=': 'eq',
-    'gt': 'lte', 'gte': 'lt', 'lt': 'gte', 'lte': 'gt',
-    'in': 'not_in', 'not_in': 'in',
-    'contains': 'not_contains', 'not_contains': 'contains',
-  }
-  return n[op] ?? op
-}

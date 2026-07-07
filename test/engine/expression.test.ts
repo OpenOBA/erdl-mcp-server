@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { SafeExpr } from '../../src/engine/expression.js'
+import { SafeExpr } from '../../src/engine/safe-expr.js'
 
 describe('SafeExpr', () => {
   const engine = new SafeExpr()
