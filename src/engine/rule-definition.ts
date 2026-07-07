@@ -100,6 +100,9 @@ export interface RuleDefinition {
   /** Whether this rule is currently active */
   enabled: boolean
 
+  /** Spec v1.1 Section 4.4: stops all further rule evaluation on match */
+  override?: boolean
+
   /** Rule version (for tracking changes) */
   version?: number
 

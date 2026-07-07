@@ -1,0 +1,51 @@
+# ERDL Rules — Writing · Agent Context
+
+rules:
+  no_cliche:
+    when: intent in ("write_blog", "write_content", "write_post") AND (output_text contains "在当今时代" OR output_text contains "众所周知" OR output_text contains "值得注意的是")
+    then: BLOCK "不要用套话开头。直接切入主题。禁用: '在当今时代' '众所周知' '值得注意的是'。"
+    priority: 3
+    category: writing
+    description: 禁止套话开头
+
+  direct_tone:
+    when: intent in ("write_blog", "write_content", "write_post")
+    then: ALLOW "主动语态。主语优先。直接有力。不用模糊表达 (might, could potentially)。"
+    priority: 5
+    category: writing
+    description: 直接有力的语气
+
+  short_sentences:
+    when: intent in ("write_blog", "write_article")
+    then: ALLOW "句子 < 25 字。段落 < 4 句。用列表展示要点。"
+    priority: 10
+    category: writing
+    description: 短句优先
+
+  no_ai_jargon:
+    when: intent in ("write_content", "write_blog", "write_marketing") AND (output_text contains "赋能" OR output_text contains "抓手" OR output_text contains "闭环" OR output_text contains "底层逻辑" OR output_text contains "降本增效" OR output_text contains "颗粒度" OR output_text contains "leverage" OR output_text contains "ecosystem" OR output_text contains "synergy")
+    then: BLOCK "不要用 AI 套话。禁用: 赋能/抓手/闭环/底层逻辑/降本增效/颗粒度/empower/leverage/ecosystem/synergy。用人类语言。"
+    priority: 5
+    category: writing
+    description: 禁止 AI 套话
+
+  chinese_english_spacing:
+    when: language = "zh"
+    then: ALLOW "中文和英文/数字加空格。'用 Agent 编码' 正确。'用Agent编码' 错误。"
+    priority: 3
+    category: writing
+    description: 中英混排加空格
+
+  heading_hierarchy:
+    when: intent in ("write_document", "write_markdown")
+    then: ALLOW "一个文档一个 H1。用 H2 分节。不跳级 (H2→H4)。"
+    priority: 10
+    category: writing
+    description: 标题层级规范
+
+  list_consistency:
+    when: intent in ("write_content", "format_list")
+    then: ALLOW "列表项保持相同语法结构。标点统一。"
+    priority: 15
+    category: writing
+    description: 列表格式统一

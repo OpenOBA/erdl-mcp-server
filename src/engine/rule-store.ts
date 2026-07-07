@@ -13,7 +13,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import * as yaml from 'js-yaml'
-import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition } from './rule-definition.js'
+import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator } from './rule-definition.js'
 
 // ============================================
 // Types
@@ -223,13 +223,24 @@ export class RuleStore {
         const content = fs.readFileSync(filePath, 'utf-8')
         const parsed = yaml.load(content) as YamlFile | null
 
-        if (!parsed?.rules || !Array.isArray(parsed.rules)) continue
+        if (!parsed?.rules) continue
 
-        for (const raw of parsed.rules) {
-          const rule = this.parseRule(raw, filePath)
-          if (rule) {
-            // Skip if ID already exists (first loaded wins)
-            if (!this.rules.has(rule.id)) {
+        // Spec v1.1 format: rules as keyed map { rule_name: { when, then, ... } }
+        if (typeof parsed.rules === 'object' && !Array.isArray(parsed.rules)) {
+          for (const [ruleId, ruleDef] of Object.entries(parsed.rules)) {
+            const rule = this.parseSpecRule(ruleId, ruleDef as Record<string, unknown>, filePath)
+            if (rule && !this.rules.has(rule.id)) {
+              this.rules.set(rule.id, rule)
+              count++
+            }
+          }
+        }
+
+        // Legacy format: rules as array
+        if (Array.isArray(parsed.rules)) {
+          for (const raw of parsed.rules) {
+            const rule = this.parseRule(raw, filePath)
+            if (rule && !this.rules.has(rule.id)) {
               this.rules.set(rule.id, rule)
               count++
             }
@@ -273,7 +284,7 @@ export class RuleStore {
       keywords: c.keywords,
       pattern: c.pattern,
       field: c.field,
-      value: c.value,
+      value: c.value as string,
     }))
 
     const action: RuleAction = {
@@ -295,6 +306,159 @@ export class RuleStore {
       version: raw.version ?? 1,
       hitCount: 0,
     }
+  }
+
+  /**
+   * Parse a rule in ERDL Spec keyed-map format.
+   *
+   * rules:
+   *   no_any:
+   *     when: language = "typescript" AND output_text contains "any"
+   *     then: BLOCK "不要使用 any 类型"
+   */
+  private parseSpecRule(ruleId: string, raw: Record<string, unknown>, _sourceFile: string): RuleDefinition | null {
+    if (!ruleId) return null
+
+    const category = (raw.category as RuleCategory) ?? 'custom'
+    const description = (raw.description as string) ?? ruleId
+    const whenExpr = (raw.when as string) ?? ''
+    const thenExpr = (raw.then as string) ?? ''
+
+    // Parse when → conditions[]
+    const conditions: RuleCondition[] = this.parseWhenExpression(whenExpr)
+
+    // Parse then → action
+    const action = this.parseThenExpression(thenExpr)
+
+    return {
+      id: ruleId,
+      name: ruleId,
+      description,
+      category,
+      triggers: [ruleId],
+      conditions,
+      action,
+      priority: (raw.priority as number) ?? 100,
+      enabled: (raw.enabled as boolean) ?? true,
+      override: (raw.override as boolean) ?? false,
+      version: (raw.version as number) ?? 1,
+      hitCount: 0,
+    }
+  }
+
+  /**
+   * Parse when expression → RuleCondition[]
+   *
+   * Supports ERDL Spec operators + extensions:
+   *   field = "value" | field != "value" | field in ("a","b")
+   *   field contains "val" | field match "regex"
+   *   AND / OR / NOT logic with () grouping
+   */
+  private parseWhenExpression(expr: string): RuleCondition[] {
+    if (!expr || expr === 'true') return []
+
+    // Try compileWhen first (standard ERDL Spec operators)
+    try {
+      const { compileWhen } = require('./erdl-expr-parser.js') as { compileWhen: (s: string) => Record<string, unknown> }
+      const ast = compileWhen(expr)
+      if (ast.conditions && Array.isArray(ast.conditions)) {
+        return (ast.conditions as Array<Record<string, unknown>>).map((c) => ({
+          kind: 'context_matches' as const,
+          field: c.field as string ?? '',
+          value: c.value,
+          operator: mapSpecOp(c.operator as string),
+        }))
+      }
+    } catch {
+      // Fall through to simple parser for Agent-specific operators (contains, match)
+    }
+
+    return this.parseWhenSimple(expr)
+  }
+
+  /** Simple when expression parser for Agent extensions (contains, match) */
+  private parseWhenSimple(expr: string): RuleCondition[] {
+    // Split top-level AND (outside parens)
+    const parts = this.splitByLogic(expr, /\s+AND\s+/i)
+    if (parts.length > 1) return parts.flatMap((p) => this.parseWhenSimple(p))
+
+    // Handle single OR group
+    const orParts = this.splitByLogic(expr, /\s+OR\s+/i)
+    if (orParts.length > 1) return orParts.flatMap((p) => this.parseWhenSimple(p))
+
+    return [this.parseSingleWhen(expr.trim())].filter(Boolean) as RuleCondition[]
+  }
+
+  private parseSingleWhen(s: string): RuleCondition | null {
+    s = s.trim()
+    if (s.startsWith('(') && s.endsWith(')')) s = s.slice(1, -1).trim()
+
+    // Handle NOT
+    let negate = false
+    if (/^NOT\s+/i.test(s)) { negate = true; s = s.replace(/^NOT\s+/i, '').trim() }
+
+    // field contains "value"
+    const containsMatch = s.match(/^(\w+)\s+contains\s+(.+)$/)
+    if (containsMatch) {
+      return { kind: 'context_matches', field: containsMatch[1], value: unquote(containsMatch[2]), operator: negate ? 'not_contains' : 'contains' }
+    }
+
+    // field match "regex"
+    const matchMatch = s.match(/^(\w+)\s+match\s+(.+)$/)
+    if (matchMatch) {
+      return { kind: 'context_matches', field: matchMatch[1], value: unquote(matchMatch[2]), operator: negate ? 'not_contains' : 'match' }
+    }
+
+    // field = "value"
+    const eqMatch = s.match(/^(\w+)\s+(=|!=|>=|<=|>|<)\s+(.+)$/)
+    if (eqMatch) {
+      const op = negate ? negateOp(eqMatch[2]) : eqMatch[2]
+      return { kind: 'context_matches', field: eqMatch[1], value: unquote(eqMatch[3]), operator: mapSpecOp(op) }
+    }
+
+    // field in ("v1", "v2")
+    const inMatch = s.match(/^(\w+)\s+(not_?)?in\s+\((.+)\)$/i)
+    if (inMatch) {
+      const vals = inMatch[3].split(',').map((v) => unquote(v.trim()))
+      const op = negate || inMatch[2] ? 'not_in' : 'in'
+      return { kind: 'context_matches', field: inMatch[1], value: vals as unknown[], operator: op }
+    }
+
+    return null
+  }
+
+  private splitByLogic(expr: string, sep: RegExp): string[] {
+    const parts: string[] = []
+    let depth = 0; let start = 0
+    for (let i = 0; i < expr.length; i++) {
+      if (expr[i] === '(') depth++
+      else if (expr[i] === ')') depth--
+      if (depth === 0) {
+        const substr = expr.slice(i)
+        const m = substr.match(sep)
+        if (m && m.index === 0) {
+          parts.push(expr.slice(start, i).trim())
+          i += m[0].length - 1
+          start = i + 1
+        }
+      }
+    }
+    parts.push(expr.slice(start).trim())
+    return parts.filter((p) => p.length > 0)
+  }
+
+  private parseThenExpression(expr: string): RuleAction {
+    if (!expr) return { decision: 'ALLOW' }
+    const upper = expr.toUpperCase()
+    if (upper.startsWith('BLOCK') || upper.startsWith('DENY')) {
+      const reason = expr.replace(/^(BLOCK|DENY)\s*/i, '').replace(/^"|"$/g, '').trim()
+      return { decision: 'DENY', reason: reason || 'Blocked by rule' }
+    }
+    if (upper.startsWith('ALLOW') || upper.startsWith('SUGGEST')) {
+      const instruction = expr.replace(/^(ALLOW|SUGGEST)\s*/i, '').replace(/^"|"$/g, '').trim()
+      return { decision: 'ALLOW', instruction: instruction || undefined }
+    }
+    return { decision: 'ALLOW', instruction: expr || undefined }
   }
 
   private ruleToYaml(rule: RuleDefinition): YamlRule {
@@ -338,3 +502,44 @@ export class RuleStore {
 
 /** Singleton instance */
 export const ruleStore = new RuleStore()
+
+// ============================================
+// Helper functions
+// ============================================
+
+function unquote(s: string): unknown {
+  s = s.trim()
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    return s.slice(1, -1)
+  }
+  if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s)
+  if (s === 'true') return true
+  if (s === 'false') return false
+  return s
+}
+
+function mapSpecOp(op: string): ConditionOperator {
+  const map: Record<string, ConditionOperator> = {
+    '=': 'eq', '==': 'eq', 'eq': 'eq',
+    '!=': 'ne', '<>': 'ne', 'ne': 'ne',
+    '>': 'gt', 'gt': 'gt',
+    '<': 'lt', 'lt': 'lt',
+    '>=': 'gte', 'gte': 'gte',
+    '<=': 'lte', 'lte': 'lte',
+    'in': 'in', 'not_in': 'not_in',
+    'contains': 'contains', 'not_contains': 'not_contains',
+    'match': 'match',
+    'exists': 'exists', 'not_exists': 'not_exists',
+  }
+  return map[op] ?? 'eq'
+}
+
+function negateOp(op: string): string {
+  const n: Record<string, string> = {
+    'eq': 'ne', 'ne': 'eq', '=': 'ne', '!=': 'eq',
+    'gt': 'lte', 'gte': 'lt', 'lt': 'gte', 'lte': 'gt',
+    'in': 'not_in', 'not_in': 'in',
+    'contains': 'not_contains', 'not_contains': 'contains',
+  }
+  return n[op] ?? op
+}
