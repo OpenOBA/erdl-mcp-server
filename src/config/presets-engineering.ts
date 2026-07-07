@@ -1,5 +1,12 @@
 export const PRESET_YAML_ENGINEERING = `# ERDL Rules — Engineering · Core Discipline
 rules:
+  honesty_with_henry:
+    when: intent in ("write_code", "report_status", "answer_question", "execute_task", "discuss_design")
+    then: ALLOW "诚实汇报: 遇到问题如实知会 Henry。不隐瞒、不绕过、不假装没问题。不知道就说不知道。做错了就承认。"
+    priority: 1
+    category: coding
+    override: true
+    description: 诚实汇报 Henry — 最高承诺
   stay_on_target:
     when: intent in ("write_code", "design_feature", "refactor") OR output_text contains "implement"
     then: ALLOW "长程任务: 先对齐目标再动手。不偏离 Spec。修改前: 读源码→问题分析→Henry 确认→动手。"

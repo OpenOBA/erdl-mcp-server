@@ -222,7 +222,9 @@ export class RuleStore {
     for (const filePath of entries) {
       try {
         const content = fs.readFileSync(filePath, 'utf-8')
-        const parsed = yaml.load(content) as YamlFile | null
+
+        // Parse using a tolerant YAML reader (avoids js-yaml's strict indentation)
+        const parsed = this.parseYamlRaw(content)
 
         if (!parsed?.rules) continue
 
@@ -271,6 +273,79 @@ export class RuleStore {
     }
 
     return results
+  }
+
+  /**
+   * Tolerant YAML parser for .erdl.yaml files.
+   * Uses regex line-matching instead of js-yaml to avoid strict indentation issues
+   * with multi-line or quoted values in then: fields.
+   */
+  private parseYamlRaw(content: string): YamlFile | null {
+    const result: YamlFile = { rules: {} as Record<string, unknown> }
+    const lines = content.split('\n')
+    let currentRule: Record<string, unknown> | null = null
+    let currentKey = ''
+    let currentValue = ''
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+
+      // Skip comments and empty lines
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+
+      // Rule name: 2-space indent (e.g., "  no_any:")
+      const ruleMatch = line.match(/^  (\w[\w-]*):$/)
+      if (ruleMatch && !line.startsWith('    ')) {
+        if (currentRule && currentRule.id) {
+          (result.rules as Record<string, unknown>)[currentRule.id as string] = currentRule
+        }
+        currentRule = { id: ruleMatch[1] }
+        currentKey = ''
+        currentValue = ''
+        continue
+      }
+
+      if (!currentRule) continue
+
+      // Property: 4-space indent (e.g., "    when: ...")
+      const propMatch = line.match(/^    (\w+):\s*(.*)$/)
+      if (propMatch) {
+        if (currentKey && currentValue) {
+          currentRule[currentKey] = currentValue.trim()
+        }
+        currentKey = propMatch[1]
+        currentValue = propMatch[2] || ''
+        continue
+      }
+
+      // Continuation line (6+ spaces indent) for multi-line values
+      if (currentKey && line.match(/^      \S/)) {
+        currentValue += ' ' + line.trim()
+        continue
+      }
+    }
+
+    // Save last rule
+    if (currentRule && currentRule.id) {
+      if (currentKey && currentValue) {
+        currentRule[currentKey] = currentValue.trim()
+      }
+      (result.rules as Record<string, unknown>)[currentRule.id as string] = currentRule
+    }
+
+    // Handle empty result
+    const ruleKeys = Object.keys(result.rules as Record<string, unknown>)
+    if (ruleKeys.length === 0) {
+      // Try js-yaml as fallback for simple files
+      try {
+        return yaml.load(content) as YamlFile
+      } catch {
+        return null
+      }
+    }
+
+    return result
   }
 
   private parseRule(raw: YamlRule, sourceFile: string): RuleDefinition | null {
