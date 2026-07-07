@@ -439,11 +439,23 @@ export class RuleStore {
     if (!expr) return { decision: 'ALLOW' }
     const upper = expr.toUpperCase()
     if (upper.startsWith('BLOCK') || upper.startsWith('DENY')) {
-      const reason = expr.replace(/^(BLOCK|DENY)\s*/i, '').replace(/^"|"$/g, '').trim()
+      const reason = expr.replace(/^(BLOCK|DENY)\s*/i, '').replace(/^["']|["']$/g, '').trim()
       return { decision: 'DENY', reason: reason || 'Blocked by rule' }
     }
+    if (upper.startsWith('EMERGENCY_HALT')) {
+      const reason = expr.replace(/^EMERGENCY_HALT\s*/i, '').replace(/^["']|["']$/g, '').trim()
+      return { decision: 'EMERGENCY_HALT', reason: reason || 'Emergency halt', ring: 0 }
+    }
+    if (upper.startsWith('REQUEST_HUMAN')) {
+      const reason = expr.replace(/^REQUEST_HUMAN\s*/i, '').replace(/^["']|["']$/g, '').trim()
+      return { decision: 'REQUEST_HUMAN', reason: reason || 'Approval required' }
+    }
+    if (upper.startsWith('CORRECT')) {
+      const correction = expr.replace(/^CORRECT\s*/i, '').replace(/^["']|["']$/g, '').trim()
+      return { decision: 'CORRECT', correction: correction || undefined }
+    }
     if (upper.startsWith('ALLOW') || upper.startsWith('SUGGEST')) {
-      const instruction = expr.replace(/^(ALLOW|SUGGEST)\s*/i, '').replace(/^"|"$/g, '').trim()
+      const instruction = expr.replace(/^(ALLOW|SUGGEST)\s*/i, '').replace(/^["']|["']$/g, '').trim()
       return { decision: 'ALLOW', instruction: instruction || undefined }
     }
     return { decision: 'ALLOW', instruction: expr || undefined }

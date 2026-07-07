@@ -99,6 +99,35 @@ export async function evaluateHandler(args: { intent: string; context?: Record<s
     }
   }
 
+  if (result.decision === 'EMERGENCY_HALT') {
+    return {
+      content: [
+        { type: 'text' as const, text: `EMERGENCY_HALT: ${result.primaryReason}\nRule: ${result.matchedRules.filter(r => r.decision === 'EMERGENCY_HALT').map(r => r.ruleId).join(', ')}\n\nSTOP ALL ACTIONS IMMEDIATELY.` },
+      ],
+      structuredContent: { decision: 'EMERGENCY_HALT' as const, reason: result.primaryReason, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
+      isError: true,
+    }
+  }
+
+  if (result.decision === 'REQUEST_HUMAN') {
+    return {
+      content: [
+        { type: 'text' as const, text: `REQUEST_HUMAN: ${result.primaryReason}\nRule: ${result.matchedRules.filter(r => r.decision === 'REQUEST_HUMAN').map(r => r.ruleId).join(', ')}\n\nAsk the user for approval before proceeding.` },
+      ],
+      structuredContent: { decision: 'REQUEST_HUMAN' as const, reason: result.primaryReason, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
+      isError: false,
+    }
+  }
+
+  if (result.decision === 'CORRECT') {
+    return {
+      content: [
+        { type: 'text' as const, text: `CORRECT: ${result.primaryInstruction}\nRules matched: ${result.matchedRules.map(r => r.ruleId).join(', ')}\n\nRewrite your output following the correction above.` },
+      ],
+      structuredContent: { decision: 'CORRECT' as const, correction: result.primaryInstruction, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
+    }
+  }
+
   // ALLOW
   const instructions = result.matchedRules.map((r) => r.instruction).filter(Boolean)
   const summary = instructions.length > 0 ? instructions.join('\n') : 'No specific instructions.'

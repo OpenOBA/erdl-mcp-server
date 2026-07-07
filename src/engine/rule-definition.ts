@@ -55,15 +55,25 @@ export interface RuleCondition {
 // Rule Action / Decision
 // ============================================
 
-export type Decision = 'ALLOW' | 'DENY' | 'PASS'
+export type Decision = 'ALLOW' | 'DENY' | 'PASS' | 'CORRECT' | 'REQUEST_HUMAN' | 'EMERGENCY_HALT'
+
+/** Execution Ring — ERDL Protocol Spec */
+export type RingLevel = 0 | 1 | 2 | 3
+
+/** Agent role in the ERDL Protocol */
+export type AgentRole = 'guardian' | 'observed'
 
 export interface RuleAction {
   /** What should happen when this rule matches */
   decision: Decision
   /** Instruction for the LLM to follow */
   instruction?: string
-  /** Reason shown to user when denied */
+  /** Reason shown to user when blocked or halted */
   reason?: string
+  /** Execution Ring level (0-3). Guardian rules default Ring 0. */
+  ring?: RingLevel
+  /** Correction target text (CORRECT decision) */
+  correction?: string
 }
 
 // ============================================
@@ -120,6 +130,8 @@ export interface RuleMatch {
   decision: Decision
   instruction?: string
   reason?: string
+  ring?: RingLevel
+  correction?: string
   priority: number
 }
 

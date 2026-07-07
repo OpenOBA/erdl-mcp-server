@@ -31,6 +31,8 @@ export class Evaluator {
           decision: rule.action.decision,
           instruction: rule.action.instruction,
           reason: rule.action.reason,
+          ring: rule.action.ring,
+          correction: rule.action.correction,
           priority: rule.priority,
         })
       }
@@ -45,12 +47,51 @@ export class Evaluator {
       }
     }
 
+    const decisionPriority: Record<string, number> = {
+      EMERGENCY_HALT: 0, DENY: 1, REQUEST_HUMAN: 2, CORRECT: 3, ALLOW: 4, PASS: 5,
+    }
+    const worst = matchedRules.reduce((a, b) =>
+      decisionPriority[a.decision] < decisionPriority[b.decision] ? a : b,
+    )
+
+    if (worst.decision === 'EMERGENCY_HALT') {
+      return {
+        decision: 'EMERGENCY_HALT',
+        matchedRules,
+        primaryReason: worst.reason ?? 'Emergency halt triggered',
+        totalEvaluated: sorted.length,
+        totalMatched: matchedRules.length,
+      }
+    }
+
     const denied = matchedRules.find((r) => r.decision === 'DENY')
     if (denied) {
       return {
         decision: 'DENY',
         matchedRules,
         primaryReason: denied.reason ?? `Blocked by rule: ${denied.ruleName}`,
+        totalEvaluated: sorted.length,
+        totalMatched: matchedRules.length,
+      }
+    }
+
+    const humanReq = matchedRules.find((r) => r.decision === 'REQUEST_HUMAN')
+    if (humanReq) {
+      return {
+        decision: 'REQUEST_HUMAN',
+        matchedRules,
+        primaryReason: humanReq.reason ?? 'Human approval required',
+        totalEvaluated: sorted.length,
+        totalMatched: matchedRules.length,
+      }
+    }
+
+    const correct = matchedRules.find((r) => r.decision === 'CORRECT')
+    if (correct) {
+      return {
+        decision: 'CORRECT',
+        matchedRules,
+        primaryInstruction: correct.correction ?? correct.instruction ?? 'Correction applied',
         totalEvaluated: sorted.length,
         totalMatched: matchedRules.length,
       }
