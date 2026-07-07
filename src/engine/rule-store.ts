@@ -14,6 +14,7 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import * as yaml from 'js-yaml'
 import { compileWhen } from './erdl-expr-parser.js'
+import { PRESET_YAML_CODING, PRESET_YAML_WRITING, PRESET_YAML_DESIGN } from '../config/presets.js'
 import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator } from './rule-definition.js'
 
 // ============================================
@@ -79,7 +80,7 @@ export class RuleStore {
     }
 
     // Deploy preset rules on first run (if directory is empty)
-    await this.deployPresets(dir)
+    this.deployPresets(dir)
 
     const loaded = this.loadFromDir(dir)
 
@@ -91,48 +92,33 @@ export class RuleStore {
   }
 
   /**
-   * Deploy preset rules to the rules directory on first run.
-   * Creates coding/, writing/, design/ subdirectories with YAML files.
-   * Does NOT overwrite existing files.
+   * Deploy preset rules on first run from inline YAML (no file system dependency).
    */
-  private async deployPresets(dir: string): Promise<void> {
+  private deployPresets(dir: string): void {
     const existing = this.scanYamlFiles(dir)
     if (existing.length > 0) {
       console.error(`[erdl-mcp] Found ${existing.length} existing rule files, skipping preset deployment`)
       return
     }
 
-    console.error('[erdl-mcp] First run detected. Deploying 20 preset rules...')
+    console.error('[erdl-mcp] First run detected. Writing 20 preset rules from inline YAML...')
 
-    try {
-      const { allCodingRules } = await import('../presets/coding/all.js')
-      const { allWritingRules } = await import('../presets/writing/all.js')
-      const { allDesignRules } = await import('../presets/design/all.js')
+    const categories: Record<string, string> = {
+      coding: PRESET_YAML_CODING,
+      writing: PRESET_YAML_WRITING,
+      design: PRESET_YAML_DESIGN,
+    }
 
-      const categories: Array<{ name: string; rules: RuleDefinition[] }> = [
-        { name: 'coding', rules: allCodingRules },
-        { name: 'writing', rules: allWritingRules },
-        { name: 'design', rules: allDesignRules },
-      ]
-
-      for (const { name, rules } of categories) {
-        const catDir = path.join(dir, name)
-        if (!fs.existsSync(catDir)) {
-          fs.mkdirSync(catDir, { recursive: true })
-        }
-
-        const yamlContent = yaml.dump({ rules: rules.map((r) => this.ruleToYaml(r)) }, {
-          indent: 2,
-          lineWidth: 120,
-          noRefs: true,
-        })
-
-        const filePath = path.join(catDir, 'openoba-presets.yaml')
-        fs.writeFileSync(filePath, yamlContent, 'utf-8')
-        console.error(`[erdl-mcp] Deployed ${rules.length} ${name} rules to ${filePath}`)
+    for (const [name, yamlStr] of Object.entries(categories)) {
+      const catDir = path.join(dir, name)
+      if (!fs.existsSync(catDir)) fs.mkdirSync(catDir, { recursive: true })
+      const filePath = path.join(catDir, 'openoba-presets.erdl.yaml')
+      try {
+        fs.writeFileSync(filePath, yamlStr, 'utf-8')
+        console.error(`[erdl-mcp] Deployed ${name} rules to ${filePath}`)
+      } catch (err) {
+        console.error(`[erdl-mcp] Failed to write ${filePath}:`, err instanceof Error ? err.message : String(err))
       }
-    } catch (err) {
-      console.error('[erdl-mcp] Failed to deploy preset rules:', err instanceof Error ? err.message : String(err))
     }
   }
 
