@@ -15,6 +15,7 @@ import * as os from 'node:os'
 import * as yaml from 'js-yaml'
 import { compileWhen } from './erdl-expr-parser.js'
 import { PRESET_YAML_CODING, PRESET_YAML_WRITING, PRESET_YAML_DESIGN } from '../config/presets.js'
+import { PRESET_YAML_ENGINEERING } from '../config/presets-engineering.js'
 import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator } from './rule-definition.js'
 
 // ============================================
@@ -107,6 +108,7 @@ export class RuleStore {
       coding: PRESET_YAML_CODING,
       writing: PRESET_YAML_WRITING,
       design: PRESET_YAML_DESIGN,
+      engineering: PRESET_YAML_ENGINEERING,
     }
 
     for (const [name, yamlStr] of Object.entries(categories)) {
