@@ -24,6 +24,14 @@
  */
 export type ConditionKind = 'intent_contains' | 'intent_matches' | 'context_matches'
 
+/** Spec v1.1 comparison operators */
+export type ConditionOperator =
+  | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte'
+  | 'in' | 'not_in'
+  | 'contains' | 'not_contains'
+  | 'match'
+  | 'exists' | 'not_exists'
+
 export interface RuleCondition {
   kind: ConditionKind
 
@@ -33,11 +41,14 @@ export interface RuleCondition {
   /** Regex pattern to match (intent_matches / context_matches) */
   pattern?: string
 
-  /** Context field path for context_matches (e.g., "file", "language") */
+  /** Context field path for context_matches or Spec mode (e.g., "file", "language") */
   field?: string
 
   /** Expected value for context_matches comparison */
-  value?: string
+  value?: unknown
+
+  /** Spec v1.1 comparison operator (when using field/operator/value mode) */
+  operator?: ConditionOperator
 }
 
 // ============================================

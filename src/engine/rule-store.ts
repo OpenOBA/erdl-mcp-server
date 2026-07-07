@@ -30,7 +30,8 @@ interface YamlRule {
     keywords?: string[]
     pattern?: string
     field?: string
-    value?: string
+    context_matches?: string
+    value?: unknown
   }>
   action?: {
     decision?: string

@@ -1,30 +1,30 @@
 /**
- * ERDL MCP Server — Rule Evaluator
+ * ERDL MCP Server — Rule Evaluator (ERDL Spec v1.1 compliant)
  *
- * Evaluates rules against agent intent and context.
- * Adapted from openoba-starter erdl-rule-engine.ts.
+ * Dual mode: Spec field/operator/value + legacy keyword matching.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
  * @since 2026-07-07
  * @license MIT
  */
 
-import type { RuleCondition, RuleDefinition, RuleMatch, EvaluationResult } from './rule-definition.js'
+import type { RuleDefinition, RuleCondition, EvaluationResult, RuleMatch } from './rule-definition.js'
 
 export class Evaluator {
-  /**
-   * Evaluate all enabled rules against the given intent and context.
-   *
-   * @returns EvaluationResult with all matched rules and overall decision.
-   */
-  evaluate(rules: RuleDefinition[], intent: string, context: Record<string, unknown>): EvaluationResult {
+  evaluate(
+    rules: RuleDefinition[],
+    intent: string,
+    context: Record<string, unknown>,
+  ): EvaluationResult {
+    const extendedCtx = { intent, ...context }
     const enabled = rules.filter((r) => r.enabled)
     const sorted = [...enabled].sort((a, b) => a.priority - b.priority)
 
     const matchedRules: RuleMatch[] = []
 
     for (const rule of sorted) {
-      if (this.matchesConditions(rule.conditions, intent, context)) {
+      const matched = rule.conditions.length === 0 || rule.conditions.every((cond) => this.evaluateLeaf(cond, extendedCtx))
+      if (matched) {
         matchedRules.push({
           ruleId: rule.id,
           ruleName: rule.name,
@@ -45,7 +45,6 @@ export class Evaluator {
       }
     }
 
-    // Check if any rule denies
     const denied = matchedRules.find((r) => r.decision === 'DENY')
     if (denied) {
       return {
@@ -57,24 +56,23 @@ export class Evaluator {
       }
     }
 
-    // All matches are ALLOW — use highest-priority instruction
-    const best = matchedRules[0]
     return {
       decision: 'ALLOW',
       matchedRules,
-      primaryInstruction: best.instruction,
+      primaryInstruction: matchedRules[0].instruction,
       totalEvaluated: sorted.length,
       totalMatched: matchedRules.length,
     }
   }
 
-  /**
-   * Simulate a rule against a synthetic scenario (no side effects).
-   */
-  simulate(rule: RuleDefinition, intent: string, context: Record<string, unknown>): RuleMatch | null {
+  simulate(
+    rule: RuleDefinition,
+    intent: string,
+    context: Record<string, unknown>,
+  ): RuleMatch | null {
     if (!rule.enabled) return null
-
-    const matched = this.matchesConditions(rule.conditions, intent, context)
+    const ctx = { intent, ...context }
+    const matched = rule.conditions.length === 0 || rule.conditions.every((cond) => this.evaluateLeaf(cond, ctx))
     if (!matched) return null
 
     return {
@@ -87,42 +85,79 @@ export class Evaluator {
     }
   }
 
-  /**
-   * Check if any condition in the rule matches.
-   * Multiple conditions = ALL must match (AND logic for simplicity).
-   */
-  private matchesConditions(
-    conditions: RuleCondition[],
-    intent: string,
-    context: Record<string, unknown>,
-  ): boolean {
-    if (conditions.length === 0) return true
+  // ============================================
+  // Leaf condition evaluation (dual mode)
+  // ============================================
 
-    return conditions.every((cond) => this.matchSingle(cond, intent, context))
+  private evaluateLeaf(cond: RuleCondition, context: Record<string, unknown>): boolean {
+    // --- Spec v1.1 mode: field + operator + value ---
+    if (cond.field && cond.operator) {
+      return this.evaluateSpec(cond, context)
+    }
+
+    // --- Legacy intent_contains ---
+    if (cond.kind === 'intent_contains') {
+      const intent = String(context.intent ?? '').toLowerCase()
+      return (cond.keywords ?? []).some((kw) => intent.includes(kw.toLowerCase()))
+    }
+
+    // --- Legacy intent_matches ---
+    if (cond.kind === 'intent_matches') {
+      if (!cond.pattern) return false
+      try {
+        return new RegExp(cond.pattern, 'i').test(String(context.intent ?? ''))
+      } catch {
+        return false
+      }
+    }
+
+    // --- Legacy context_matches ---
+    if (cond.kind === 'context_matches') {
+      if (!cond.field || !cond.value) return false
+      const fieldVal = String(this.resolveField(cond.field, context) ?? '')
+      return fieldVal.toLowerCase().includes(String(cond.value).toLowerCase())
+    }
+
+    return false
   }
 
-  private matchSingle(cond: RuleCondition, intent: string, context: Record<string, unknown>): boolean {
-    switch (cond.kind) {
-      case 'intent_contains':
-        if (!cond.keywords || cond.keywords.length === 0) return false
-        return cond.keywords.some((kw) => intent.toLowerCase().includes(kw.toLowerCase()))
+  // ============================================
+  // Spec v1.1: field/operator/value evaluation
+  // ============================================
 
-      case 'intent_matches':
-        if (!cond.pattern) return false
+  private evaluateSpec(cond: RuleCondition, context: Record<string, unknown>): boolean {
+    const { field, operator } = cond
+    if (!field || !operator) return false
+
+    const raw = this.resolveField(field, context)
+
+    switch (operator) {
+      case 'eq': return raw === cond.value
+      case 'ne': return raw !== cond.value
+      case 'gt': return Number(raw) > Number(cond.value)
+      case 'gte': return Number(raw) >= Number(cond.value)
+      case 'lt': return Number(raw) < Number(cond.value)
+      case 'lte': return Number(raw) <= Number(cond.value)
+      case 'in':
+        return Array.isArray(cond.value) && (cond.value as unknown[]).includes(raw)
+      case 'not_in':
+        return Array.isArray(cond.value) && !(cond.value as unknown[]).includes(raw)
+      case 'contains': {
+        return String(raw ?? '').includes(String(cond.value))
+      }
+      case 'not_contains': {
+        return !String(raw ?? '').includes(String(cond.value))
+      }
+      case 'match': {
         try {
-          return new RegExp(cond.pattern, 'i').test(intent)
+          return new RegExp(cond.value as string).test(String(raw ?? ''))
         } catch {
           return false
         }
-
-      case 'context_matches':
-        if (!cond.field || !cond.value) return false
-        const fieldValue = this.resolveField(cond.field, context)
-        const strValue = String(fieldValue ?? '')
-        return strValue.toLowerCase().includes(cond.value.toLowerCase())
-
-      default:
-        return false
+      }
+      case 'exists': return raw !== undefined && raw !== null
+      case 'not_exists': return raw === undefined || raw === null
+      default: return false
     }
   }
 
