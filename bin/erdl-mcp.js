@@ -23,7 +23,7 @@ try {
   // If first attempt fails, try to require-resolve the package
   try {
     const require = createRequire(import.meta.url)
-    const resolved = require.resolve('@openoba/erdl-mcp/dist/index.js')
+    const resolved = require.resolve('@openoba-ai/erdl-mcp/dist/index.js')
     await import(resolved)
   } catch {
     console.error('[erdl-mcp] Failed to start:', err instanceof Error ? err.message : String(err))

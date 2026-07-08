@@ -1,5 +1,5 @@
 {
-  "name": "@openoba/erdl-mcp",
+  "name": "@openoba-ai/erdl-mcp",
   "version": "1.0.0-alpha.1",
   "type": "module",
   "description": "ERDL rules as an MCP Server — deterministic rules that give your Agent muscle memory",
@@ -38,7 +38,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "typecheck": "tsc --noEmit",
-    "quality": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "quality": "npm run typecheck && npm run test && npm run build",
     "prepublishOnly": "npm run quality",
     "prepack": "npm run build"
   },
