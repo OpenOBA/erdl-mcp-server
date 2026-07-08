@@ -16,10 +16,10 @@
   "homepage": "https://openoba.com/erdl-mcp",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openoba/erdl-mcp-server.git"
+    "url": "git+https://github.com/openoba/erdl-mcp-server.git"
   },
   "bin": {
-    "erdl-mcp": "./bin/erdl-mcp.js"
+    "erdl-mcp": "bin/erdl-mcp.js"
   },
   "files": [
     "bin/",
