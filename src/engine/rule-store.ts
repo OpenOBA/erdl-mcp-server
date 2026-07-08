@@ -14,7 +14,10 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import * as yaml from 'js-yaml'
 import { compileWhen } from './erdl-expr-parser.js'
-import { PRESET_YAML_CODING, PRESET_YAML_WRITING, PRESET_YAML_DESIGN, PRESET_YAML_ENGINEERING } from '../config/presets.js'
+import { codingRules } from '../presets/coding/all.js'
+import { designRules } from '../presets/design/all.js'
+import { allWritingRules } from '../presets/writing/all.js'
+import { engineeringRules } from '../presets/engineering/all.js'
 import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator, AgentIdentity } from './rule-definition.js'
 
 // ============================================
@@ -81,8 +84,8 @@ export class RuleStore {
       console.error(`[erdl-mcp] Created rules directory: ${dir}`)
     }
 
-    // Deploy preset rules on first run (if directory is empty)
-    this.deployPresets(dir)
+    // Load preset rules from TypeScript source (shipped with the package)
+    this.loadBuiltinPresets()
 
     const loaded = this.loadFromDir(dir)
 
@@ -94,35 +97,17 @@ export class RuleStore {
   }
 
   /**
-   * Deploy preset rules on first run from inline YAML (no file system dependency).
+   * Load built-in preset rules from TypeScript source.
+   * These ship with the package and are updated on each release.
    */
-  private deployPresets(dir: string): void {
-    const existing = this.scanYamlFiles(dir)
-    if (existing.length > 0) {
-      console.error(`[erdl-mcp] Found ${existing.length} existing rule files, skipping preset deployment`)
-      return
-    }
-
-    console.error('[erdl-mcp] First run detected. Writing 30 preset rules from inline YAML...')
-
-    const categories: Record<string, string> = {
-      coding: PRESET_YAML_CODING,
-      writing: PRESET_YAML_WRITING,
-      design: PRESET_YAML_DESIGN,
-      engineering: PRESET_YAML_ENGINEERING,
-    }
-
-    for (const [name, yamlStr] of Object.entries(categories)) {
-      const catDir = path.join(dir, name)
-      if (!fs.existsSync(catDir)) fs.mkdirSync(catDir, { recursive: true })
-      const filePath = path.join(catDir, 'openoba-presets.erdl.yaml')
-      try {
-        fs.writeFileSync(filePath, yamlStr, 'utf-8')
-        console.error(`[erdl-mcp] Deployed ${name} rules to ${filePath}`)
-      } catch (err) {
-        console.error(`[erdl-mcp] Failed to write ${filePath}:`, err instanceof Error ? err.message : String(err))
+  private loadBuiltinPresets(): void {
+    const presets = [...codingRules, ...designRules, ...allWritingRules, ...engineeringRules]
+    for (const rule of presets) {
+      if (!this.rules.has(rule.id)) {
+        this.rules.set(rule.id, rule)
       }
     }
+    console.error(`[erdl-mcp] Loaded ${presets.length} built-in preset rules`)
   }
 
   /** Reload all rules (called on file change) */

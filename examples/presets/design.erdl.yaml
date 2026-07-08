@@ -1,0 +1,25 @@
+# ERDL Rules — Design Presets (Example)
+#
+# Copy this pattern to create your own design rules.
+
+rules:
+  tailwind_first:
+    when: tool.name in ("write_file", "edit", "apply_patch")
+    then: ALLOW "优先 Tailwind CSS。不用 inline style 或 CSS module。"
+    priority: 5
+    category: design
+    description: Tailwind 优先
+
+  responsive_first:
+    when: tool.name in ("write_file", "edit", "apply_patch")
+    then: ALLOW "移动端优先。Tailwind 断点: sm: md: lg: xl: 2xl:。至少 3 个断点。"
+    priority: 5
+    category: design
+    description: 响应式优先
+
+  a11y_basics:
+    when: tool.name in ("write_file", "edit", "apply_patch")
+    then: ALLOW "无障碍: (1) 键盘可达 (2) WCAG AA 4.5:1 (3) 图片 alt (4) 表单 label (5) 语义 HTML。"
+    priority: 5
+    category: design
+    description: 无障碍基础

@@ -1,0 +1,83 @@
+# ERDL Rules — Engineering Presets (Example)
+#
+# Core discipline rules for engineering workflows.
+# Copy this pattern to create your own engineering rules.
+
+rules:
+  honesty_with_henry:
+    when: true
+    then: ALLOW "诚实汇报: 遇到问题如实知会 Henry。不隐瞒、不绕过、不假装没问题。不知道就说不知道。做错了就承认。"
+    priority: 1
+    category: coding
+    override: true
+    description: 诚实汇报 — 最高承诺
+
+  stay_on_target:
+    when: tool.name in ("write_file", "edit", "apply_patch", "exec")
+    then: ALLOW "长程任务: 先对齐目标再动手。不偏离 Spec。修改前: 读源码→问题分析→确认→动手。"
+    priority: 1
+    category: coding
+    override: true
+    description: 方向不漂移
+
+  no_single_task_tunnel:
+    when: tool.name in ("write_file", "edit", "apply_patch", "exec")
+    then: ALLOW "全局优先: 不为当前任务破坏一致性。不追求速度，以质量为准。"
+    priority: 2
+    category: coding
+    override: true
+    description: 全局优先
+
+  design_before_code:
+    when: tool.name in ("write_file", "edit", "apply_patch")
+    then: ALLOW "Spec 先行: 先与 ERDL Spec 对齐。不先写代码再补 Spec。"
+    priority: 3
+    category: coding
+    override: true
+    description: Spec 先行
+
+  no_stash:
+    when: tool.name = "exec"
+    then: BLOCK "禁止 git stash 累积。所有变更必须入 commit。"
+    priority: 4
+    category: coding
+    override: true
+    description: 禁止 stash
+
+  no_powershell_setcontent:
+    when: tool.name = "exec"
+    then: BLOCK "禁用 Set-Content/Out-File。会损坏 UTF-8 编码。"
+    priority: 4
+    category: coding
+    override: true
+    description: 禁止编码损坏
+
+  pipeline_before_push:
+    when: tool.name = "exec"
+    then: ALLOW "推送前: typecheck 0 error → build 0 error → test all pass。"
+    priority: 3
+    category: coding
+    override: true
+    description: 推送前门禁
+
+  no_shortcut:
+    when: tool.name in ("write_file", "edit", "apply_patch", "exec")
+    then: BLOCK "禁止临时方案。不要在任务中接受 workaround 或 hack。从根本上解决。"
+    priority: 5
+    category: coding
+    description: 禁止工程债务
+
+  docs_with_delivery:
+    when: tool.name in ("write_file", "edit", "apply_patch", "exec")
+    then: ALLOW "文档即交付。代码写完不算完，文档更新才算交付完成。"
+    priority: 8
+    category: coding
+    description: 文档即交付
+
+  no_force_push_main:
+    when: tool.name = "exec"
+    then: BLOCK "禁止 force push master/main。"
+    priority: 1
+    category: coding
+    override: true
+    description: 禁止 force push
