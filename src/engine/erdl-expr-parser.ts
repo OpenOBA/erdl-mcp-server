@@ -210,12 +210,12 @@ class ExpressionCompiler {
       const right = this.parseAnd()
       // Flatten OR into conditions array with logic: OR
       if (left.conditions && right.conditions) {
-        // V1 doesn't directly support nested OR — wrap in single condition
-        // For simplicity, we create a joined condition
-        return {
+        left = {
           logic: 'OR',
           conditions: [...left.conditions, ...right.conditions],
         }
+      } else {
+        left = right
       }
     }
     return left
