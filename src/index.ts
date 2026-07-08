@@ -9,7 +9,16 @@
  * @license MIT
  */
 
+import { readFileSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+
+// Read version from package.json (source of truth)
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
+const VERSION = pkg.version as string
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
@@ -47,7 +56,7 @@ export async function main(): Promise<void> {
   const server = new Server(
     {
       name: 'erdl-mcp',
-      version: '1.0.0-alpha.1',
+      version: VERSION,
     },
     {
       capabilities: {
@@ -101,7 +110,7 @@ export async function main(): Promise<void> {
   const transport = new StdioServerTransport()
   await server.connect(transport)
 
-  console.error(`[erdl-mcp] 🧠 ERDL MCP Server v1.0.0-alpha.1 started`)
+  console.error(`[erdl-mcp] 🧠 ERDL MCP Server v${VERSION} started`)
   console.error(`[erdl-mcp] 👤 Role: ${ruleStore.getAgentIdentity().role} | Ring: ${ruleStore.isGuardian() ? 0 : 3}`)
   console.error(`[erdl-mcp] 📁 Rules: ${ruleStore.count()} loaded from ~/.openoba/rules/`)
   console.error(`[erdl-mcp] 🔧 Tools: ${TOOLS.map((t) => t.def.name).join(', ')}`)
