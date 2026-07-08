@@ -14,8 +14,7 @@ import * as path from 'node:path'
 import * as os from 'node:os'
 import * as yaml from 'js-yaml'
 import { compileWhen } from './erdl-expr-parser.js'
-import { PRESET_YAML_CODING, PRESET_YAML_WRITING, PRESET_YAML_DESIGN } from '../config/presets.js'
-import { PRESET_YAML_ENGINEERING } from '../config/presets-engineering.js'
+import { PRESET_YAML_CODING, PRESET_YAML_WRITING, PRESET_YAML_DESIGN, PRESET_YAML_ENGINEERING } from '../config/presets.js'
 import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator, AgentIdentity } from './rule-definition.js'
 
 // ============================================
@@ -104,7 +103,7 @@ export class RuleStore {
       return
     }
 
-    console.error('[erdl-mcp] First run detected. Writing 20 preset rules from inline YAML...')
+    console.error('[erdl-mcp] First run detected. Writing 30 preset rules from inline YAML...')
 
     const categories: Record<string, string> = {
       coding: PRESET_YAML_CODING,
@@ -337,9 +336,9 @@ export class RuleStore {
     // Handle empty result
     const ruleKeys = Object.keys(result.rules as Record<string, unknown>)
     if (ruleKeys.length === 0) {
-      // Try js-yaml as fallback for simple files
+      // Try js-yaml as fallback for simple files (YAML 1.2 schema to avoid Norway problem)
       try {
-        return yaml.load(content) as YamlFile
+        return yaml.load(content, { schema: yaml.JSON_SCHEMA }) as YamlFile
       } catch {
         return null
       }

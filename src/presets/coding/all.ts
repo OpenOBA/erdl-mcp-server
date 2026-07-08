@@ -1,207 +1,147 @@
 /**
- * ERDL MCP Server — Coding Preset Rules
+ * ERDL MCP Server — Coding Preset Rules (Tool Call Guard mode)
  *
- * 10 rules for TypeScript, Git, and dependency management.
- * These ship with the package and work immediately.
+ * Rules match against tool_name + tool_args, per ERDL Spec §5.3.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-08
  * @license MIT
  */
 
 import type { RuleDefinition } from '../../engine/rule-definition.js'
 
-export const typescriptRules: RuleDefinition[] = [
+/** Common coding tool names these rules apply to */
+const CODING_TOOLS = ['write_file', 'edit', 'apply_patch', 'exec', 'write']
+
+export const codingRules: RuleDefinition[] = [
   {
-    id: 'TS-001',
-    name: 'No any types',
-    description: 'Never use `any` in TypeScript. Use `unknown` with type guards, or define proper interfaces/types.',
+    id: 'CD-001',
+    name: 'no_any',
+    description: 'Never use `any` in TypeScript.',
     category: 'coding',
-    triggers: ['write_code', 'output_code', 'generate_function', 'write_typescript'],
-    conditions: [{ kind: 'intent_contains', keywords: ['typescript', '.ts', 'tsx', 'type', 'interface', 'function'] }],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Do NOT use `any` type. Use `unknown` with type guards, define a proper type/interface, or use generics. No `// @ts-ignore` either.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Do NOT use `any` type. Use `unknown` with type guards, define a proper type/interface, or use generics.' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'TS-002',
-    name: 'No @ts-ignore or @ts-expect-error without reason',
-    description: 'Never suppress TypeScript errors without a documented reason.',
+    id: 'CD-002',
+    name: 'no_ts_ignore',
+    description: 'Never suppress TypeScript errors without reason.',
     category: 'coding',
-    triggers: ['write_code', 'output_code', 'write_typescript'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['typescript', '.ts', 'tsx', 'fix', 'error', 'type error', 'build error'] },
-    ],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Do NOT use `// @ts-ignore` or `// @ts-expect-error` without a comment explaining why. If a type error occurs, fix it properly or use a type assertion with explanation.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Do NOT use @ts-ignore/@ts-expect-error without a comment explaining why.' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'TS-003',
-    name: 'Naming conventions',
-    description: 'Use camelCase for variables/functions, PascalCase for classes/interfaces, UPPER_SNAKE_CASE for constants.',
+    id: 'CD-003',
+    name: 'naming_conventions',
+    description: 'camelCase for vars/functions, PascalCase for classes, UPPER_SNAKE for constants.',
     category: 'coding',
-    triggers: ['write_code', 'output_code', 'write_typescript', 'write_javascript'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['typescript', 'javascript', '.ts', '.js', 'variable', 'function', 'class', 'interface', 'const'] },
-    ],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Use camelCase for variables and functions, PascalCase for classes and interfaces, UPPER_SNAKE_CASE for constants. No Hungarian notation, no leading underscores unless private.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Use camelCase, PascalCase, UPPER_SNAKE_CASE as appropriate.' },
     priority: 10,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'TS-004',
-    name: 'Handle promises properly',
-    description: 'Always await promises or return them. Never fire-and-forget without .catch().',
+    id: 'CD-004',
+    name: 'handle_promises',
+    description: 'Promise must be awaited or .catch()',
     category: 'coding',
-    triggers: ['write_code', 'output_code', 'write_typescript', 'write_javascript'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['async', 'await', 'promise', 'fetch', 'then', 'callback'] },
-    ],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Always `await` promises or `.catch()` them. No floating promises. In React, use `useEffect` cleanup functions. In Node.js, handle `unhandledRejection`.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Every Promise must be awaited or have .catch() handler.' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'TS-005',
-    name: 'Avoid nested ternaries',
-    description: 'Nested ternary operators are unreadable. Use if/else or extract to a function.',
+    id: 'CD-005',
+    name: 'no_nested_ternary',
+    description: 'No nested ternary expressions.',
     category: 'coding',
-    triggers: ['write_code', 'output_code'],
-    conditions: [{ kind: 'intent_contains', keywords: ['ternary', 'nested ternary', 'inline if', 'conditional expression', '?:'] }],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Do not use nested ternary operators (`a ? b : c ? d : e`). Use if/else statements or extract to a named function with early returns.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'No nested ternary. Use if-else or switch.' },
     priority: 20,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
-]
-
-export const gitRules: RuleDefinition[] = [
   {
-    id: 'GIT-001',
-    name: 'Commit message format',
-    description: 'Use conventional commit format: type(scope): description',
+    id: 'CD-006',
+    name: 'commit_format',
+    description: 'Commit with type(scope): description format.',
     category: 'coding',
-    triggers: ['git_commit', 'commit_code', 'write_commit_message'],
-    conditions: [{ kind: 'intent_contains', keywords: ['commit', 'git commit', 'git add'] }],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Use conventional commit format: `type(scope): description`. Types: feat, fix, docs, refactor, test, chore, style. Keep subject under 72 chars, use imperative mood.',
-    },
+    triggers: ['exec'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+    action: { decision: 'ALLOW', instruction: 'Commit format: type(scope): description. E.g., feat(api): add user endpoint.' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'GIT-002',
-    name: 'One commit one logical change',
-    description: 'Each commit should address exactly one concern. Do not bundle unrelated changes.',
+    id: 'CD-007',
+    name: 'one_commit_one_change',
+    description: 'One commit per logical change.',
     category: 'coding',
-    triggers: ['git_commit', 'commit_code'],
-    conditions: [{ kind: 'intent_contains', keywords: ['commit', 'git commit', 'git add', 'bundle', 'multiple'] }],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'One commit = one logical change. Do not mix refactoring with feature changes in the same commit. Split into separate commits if needed.',
-    },
+    triggers: ['exec'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+    action: { decision: 'ALLOW', instruction: 'One commit = one logical change. Separate concerns into distinct commits.' },
     priority: 10,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'GIT-003',
-    name: 'PR title with emoji prefix',
-    description: 'Pull request titles should start with a relevant emoji for quick scanning.',
+    id: 'CD-008',
+    name: 'pr_emoji',
+    description: 'PR title with emoji prefix.',
     category: 'coding',
-    triggers: ['git_commit', 'create_pr', 'pull_request'],
-    conditions: [{ kind: 'intent_contains', keywords: ['pr', 'pull request', 'merge request', 'github', 'gitlab'] }],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'PR titles should start with an emoji: ✨ feat, 🐛 fix, 📝 docs, ♻️ refactor, ✅ test, 🔧 chore, 🎨 style. Example: "✨ feat: add user authentication".',
-    },
+    triggers: ['write_file', 'edit'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'PR title should start with emoji prefix: ✨ feat, 🐛 fix, 📖 docs, ♻️ refactor, etc.' },
     priority: 15,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
-]
-
-export const dependenciesRules: RuleDefinition[] = [
   {
-    id: 'DEP-001',
-    name: 'Confirm before adding dependencies',
-    description: 'Ask for user confirmation before adding any new npm/pip/cargo dependency.',
+    id: 'CD-009',
+    name: 'confirm_dependencies',
+    description: 'New dependencies must be confirmed with Henry first.',
     category: 'coding',
-    triggers: ['write_code', 'add_dependency', 'install_package'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['npm install', 'pip install', 'cargo add', 'yarn add', 'pnpm add', 'bun add', 'gem install', 'composer require', 'new dependency', 'add dependency'] },
-    ],
-    action: {
-      decision: 'DENY',
-      reason:
-        'Adding a new dependency requires confirmation. Check if the project already has a similar package. List the proposed dependency name and version for user approval before proceeding.',
-    },
+    triggers: ['write_file', 'edit', 'exec'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'REQUEST_HUMAN', reason: 'New dependencies must be confirmed with Henry before adding.' },
     priority: 3,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'DEP-002',
-    name: 'Prefer existing dependencies',
-    description: 'Before adding a new package, check if the project already has one that can do the job.',
+    id: 'CD-010',
+    name: 'prefer_existing',
+    description: 'Prefer existing dependencies over adding new ones.',
     category: 'coding',
-    triggers: ['write_code', 'add_dependency', 'install_package'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['add package', 'install package', 'add library', 'new library', 'need a library', 'need a package'] },
-    ],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Before suggesting a new dependency, review the project\'s existing dependencies (package.json / requirements.txt / Cargo.toml). If an existing package can serve the need, use that instead.',
-    },
+    triggers: ['write_file', 'edit', 'exec'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CODING_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Check existing dependencies before adding new ones. Reuse what is already installed.' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
-]
-
-export const allCodingRules: RuleDefinition[] = [
-  ...typescriptRules,
-  ...gitRules,
-  ...dependenciesRules,
 ]

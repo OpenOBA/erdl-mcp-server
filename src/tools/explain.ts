@@ -29,24 +29,38 @@ Use this when:
   inputSchema: {
     type: 'object',
     properties: {
-      intent: {
+      tool_name: {
         type: 'string',
-        description: 'The intent to explain (same as you used for erdl_evaluate)',
+        description: 'The tool name to explain (same as you used for erdl_evaluate)',
       },
-      context: {
+      tool_args: {
         type: 'object',
-        description: 'The same context you used for erdl_evaluate',
+        description: 'The same tool arguments you used for erdl_evaluate',
         additionalProperties: true,
       },
     },
-    required: ['intent'],
+    required: ['tool_name'],
   },
 }
 
-export async function explainHandler(args: { intent: string; context?: Record<string, unknown> }) {
+export async function explainHandler(args: {
+  tool_name: string
+  tool_args?: Record<string, unknown>
+}) {
   const allRules = ruleStore.getAll()
   const enabled = allRules.filter((r) => r.enabled)
   const sorted = [...enabled].sort((a, b) => a.priority - b.priority)
+
+  // Build guard context
+  const ctx: Record<string, unknown> = {
+    'tool.name': args.tool_name,
+    'tool.args': args.tool_args ?? {},
+  }
+  if (args.tool_args) {
+    for (const [key, value] of Object.entries(args.tool_args)) {
+      ctx[`tool.args.${key}`] = value
+    }
+  }
 
   // Evaluate every rule individually
   type RuleTrace = {
@@ -60,20 +74,22 @@ export async function explainHandler(args: { intent: string; context?: Record<st
   }
 
   const traces: RuleTrace[] = sorted.map((rule) => {
-    const match = evaluator.simulate(rule, args.intent, args.context ?? {})
+    const match = evaluator.simulate(rule, ctx)
     let conditionDetail = ''
     if (rule.conditions.length > 0) {
       const cond = rule.conditions[0]
       switch (cond.kind) {
+        case 'context_matches':
+          conditionDetail = `context.${cond.field ?? ''} ${cond.operator ?? 'contains'} "${cond.value ?? ''}"`
+          break
         case 'intent_contains':
-          conditionDetail = `intent contains any of: [${(cond.keywords ?? []).join(', ')}]`
+          conditionDetail = `legacy intent_contains: [${(cond.keywords ?? []).join(', ')}]`
           break
         case 'intent_matches':
-          conditionDetail = `intent matches: /${cond.pattern ?? ''}/`
+          conditionDetail = `legacy intent_matches: /${cond.pattern ?? ''}/`
           break
-        case 'context_matches':
-          conditionDetail = `context.${cond.field ?? ''} contains "${cond.value ?? ''}"`
-          break
+        default:
+          conditionDetail = `${cond.kind}`
       }
     } else {
       conditionDetail = 'always matches (no conditions)'
@@ -94,7 +110,7 @@ export async function explainHandler(args: { intent: string; context?: Record<st
   const unmatched = traces.filter((t) => !t.matched)
 
   // Build output
-  let text = `## Decision Trail for: "${args.intent}"\n\n`
+  let text = `## Decision Trail for tool call: "${args.tool_name}"\n\n`
 
   if (matched.length > 0) {
     text += `### ✅ Matched Rules (${matched.length})\n`
@@ -114,14 +130,14 @@ export async function explainHandler(args: { intent: string; context?: Record<st
   }
 
   // Overall result
-  const result: EvaluationResult = evaluator.evaluate(enabled, args.intent, args.context ?? {})
+  const result: EvaluationResult = evaluator.evaluate(enabled, ctx)
   text += `### Final Decision: ${result.decision}\n`
   text += `Total rules checked: ${sorted.length} | Matched: ${matched.length} | Skipped: ${unmatched.length}\n`
 
   return {
     content: [{ type: 'text' as const, text }],
     structuredContent: {
-      intent: args.intent,
+      tool_name: args.tool_name,
       decision: result.decision,
       totalChecked: sorted.length,
       matched: traces.filter((t) => t.matched),

@@ -1,8 +1,11 @@
 /**
- * ERDL MCP Server — Evaluator Tests
+ * ERDL MCP Server — Evaluator Tests (Tool Call Guard Mode)
+ *
+ * Tests guard-style evaluation: rules match against tool_name + tool_args,
+ * not against NLP intent strings.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-08
  * @license MIT
  */
 
@@ -28,110 +31,111 @@ function makeRule(overrides: Partial<RuleDefinition> = {}): RuleDefinition {
   }
 }
 
-describe('Evaluator', () => {
-  describe('intent_contains matching', () => {
-    it('matches keyword in intent', () => {
-      const rules = [makeRule({ conditions: [{ kind: 'intent_contains', keywords: ['typescript'] }] })]
-      const result = evaluator.evaluate(rules, 'write typescript code', {})
+/** Build guard context from tool call params (ERDL Spec §5.3) */
+function guardCtx(toolName: string, toolArgs: Record<string, unknown> = {}): Record<string, unknown> {
+  const ctx: Record<string, unknown> = {
+    'tool.name': toolName,
+    'tool.args': toolArgs,
+  }
+  for (const [key, value] of Object.entries(toolArgs)) {
+    ctx[`tool.args.${key}`] = value
+  }
+  return ctx
+}
+
+describe('Evaluator (Tool Call Guard mode)', () => {
+  // ============================================
+  // Spec v1.1: field/operator/value mode
+  // ============================================
+
+  describe('tool.name matching (Spec v1.1 field/operator/value)', () => {
+    it('matches tool name with eq operator', () => {
+      const rules = [makeRule({
+        conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+        action: { decision: 'DENY', reason: 'exec tool blocked' },
+      })]
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
       expect(result.decision).toBe('DENY')
       expect(result.matchedRules).toHaveLength(1)
     })
 
-    it('does not match when keyword absent', () => {
-      const rules = [makeRule({ conditions: [{ kind: 'intent_contains', keywords: ['typescript'] }] })]
-      const result = evaluator.evaluate(rules, 'write python code', {})
-      expect(result.decision).toBe('PASS')
-    })
-
-    it('matches case-insensitive', () => {
-      const rules = [makeRule({ conditions: [{ kind: 'intent_contains', keywords: ['TypeScript'] }] })]
-      const result = evaluator.evaluate(rules, 'write typescript code', {})
-      expect(result.decision).toBe('DENY')
-    })
-
-    it('matches any keyword (OR within single condition)', () => {
+    it('does not match different tool name', () => {
       const rules = [makeRule({
-        conditions: [{ kind: 'intent_contains', keywords: ['react', 'vue', 'angular'] }],
-        action: { decision: 'ALLOW', instruction: 'Use framework best practices' },
+        conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+        action: { decision: 'DENY', reason: 'exec tool blocked' },
       })]
-      const result = evaluator.evaluate(rules, 'write vue component', {})
-      expect(result.decision).toBe('ALLOW')
-    })
-  })
-
-  describe('intent_matches matching', () => {
-    it('matches regex pattern', () => {
-      const rules = [makeRule({ conditions: [{ kind: 'intent_matches', pattern: 'write\\.(ts|tsx)' }] })]
-      const result = evaluator.evaluate(rules, 'edit write.ts file', {})
-      expect(result.decision).toBe('DENY')
-    })
-
-    it('does not match wrong pattern', () => {
-      const rules = [makeRule({ conditions: [{ kind: 'intent_matches', pattern: 'write\\.(ts|tsx)' }] })]
-      const result = evaluator.evaluate(rules, 'edit write.py file', {})
+      const result = evaluator.evaluate(rules, guardCtx('web_search'))
       expect(result.decision).toBe('PASS')
     })
-  })
 
-  describe('context_matches matching', () => {
-    it('matches context field value', () => {
+    it('matches tool name with in operator', () => {
       const rules = [makeRule({
-        conditions: [{ kind: 'context_matches', field: 'file', value: '.ts' }],
+        conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: ['exec', 'bash'] }],
+        action: { decision: 'REQUEST_HUMAN', reason: 'dangerous tool' },
       })]
-      const result = evaluator.evaluate(rules, 'edit file', { file: 'app.ts' })
-      expect(result.decision).toBe('DENY')
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
+      expect(result.decision).toBe('REQUEST_HUMAN')
     })
 
-    it('does not match wrong context value', () => {
+    it('does not match tool not in list', () => {
       const rules = [makeRule({
-        conditions: [{ kind: 'context_matches', field: 'file', value: '.ts' }],
+        conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: ['exec', 'bash'] }],
+        action: { decision: 'REQUEST_HUMAN', reason: 'dangerous tool' },
       })]
-      const result = evaluator.evaluate(rules, 'edit file', { file: 'app.py' })
+      const result = evaluator.evaluate(rules, guardCtx('read_file'))
       expect(result.decision).toBe('PASS')
     })
   })
 
-  describe('priority ordering', () => {
-    it('higher priority DENY wins over lower priority ALLOW', () => {
-      const rules: RuleDefinition[] = [
-        makeRule({ id: 'LOW', priority: 100, action: { decision: 'ALLOW', instruction: 'ok' } }),
-        makeRule({ id: 'HIGH', priority: 1, action: { decision: 'DENY', reason: 'blocked' } }),
-      ]
-      const result = evaluator.evaluate(rules, 'test with any keyword', {})
+  // ============================================
+  // Tool args matching
+  // ============================================
+
+  describe('tool.args.* matching', () => {
+    it('matches tool arg with contains operator', () => {
+      const rules = [makeRule({
+        conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'rm' }],
+        action: { decision: 'DENY', reason: 'dangerous command' },
+      })]
+      const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'rm -rf /' }))
       expect(result.decision).toBe('DENY')
-      expect(result.primaryReason).toBe('blocked')
     })
 
-    it('first matched ALLOW instruction is used', () => {
-      const rules: RuleDefinition[] = [
-        makeRule({ id: 'FIRST', priority: 1, action: { decision: 'ALLOW', instruction: 'first instruction' } }),
-        makeRule({ id: 'SECOND', priority: 2, action: { decision: 'ALLOW', instruction: 'second instruction' } }),
-      ]
-      const result = evaluator.evaluate(rules, 'test with any keyword', {})
-      expect(result.decision).toBe('ALLOW')
-      expect(result.primaryInstruction).toBe('first instruction')
-    })
-  })
-
-  describe('disabled rules', () => {
-    it('skips disabled rules', () => {
-      const rules = [makeRule({ enabled: false })]
-      const result = evaluator.evaluate(rules, 'test with any keyword', {})
+    it('does not match safe args', () => {
+      const rules = [makeRule({
+        conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'rm' }],
+        action: { decision: 'DENY', reason: 'dangerous command' },
+      })]
+      const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'ls -la' }))
       expect(result.decision).toBe('PASS')
-      expect(result.totalMatched).toBe(0)
+    })
+
+    it('matches tool arg with match (regex) operator', () => {
+      const rules = [makeRule({
+        conditions: [{ kind: 'context_matches', field: 'tool.args.path', operator: 'match', value: '^/(etc|var|sys)' }],
+        action: { decision: 'CORRECT', reason: 'path out of workspace', correction: 'use workspace path' },
+      })]
+      const result = evaluator.evaluate(rules, guardCtx('write_file', { path: '/etc/config.txt' }))
+      expect(result.decision).toBe('CORRECT')
+      expect(result.primaryInstruction).toBe('use workspace path')
     })
   })
 
-  describe('multiple conditions', () => {
-    it('all conditions must match (AND logic)', () => {
+  // ============================================
+  // Multiple conditions (AND logic)
+  // ============================================
+
+  describe('multiple conditions (AND)', () => {
+    it('all conditions must match', () => {
       const rules: RuleDefinition[] = [{
         ...makeRule(),
         conditions: [
-          { kind: 'intent_contains', keywords: ['typescript'] },
-          { kind: 'context_matches', field: 'file', value: '.ts' },
+          { kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' },
+          { kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'sudo' },
         ],
+        action: { decision: 'DENY', reason: 'sudo blocked' },
       }]
-      const result = evaluator.evaluate(rules, 'write typescript code', { file: 'app.ts' })
+      const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'sudo systemctl restart' }))
       expect(result.decision).toBe('DENY')
       expect(result.matchedRules).toHaveLength(1)
     })
@@ -140,19 +144,90 @@ describe('Evaluator', () => {
       const rules: RuleDefinition[] = [{
         ...makeRule(),
         conditions: [
-          { kind: 'intent_contains', keywords: ['typescript'] },
-          { kind: 'context_matches', field: 'file', value: '.ts' },
+          { kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' },
+          { kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'sudo' },
         ],
+        action: { decision: 'DENY', reason: 'sudo blocked' },
       }]
-      const result = evaluator.evaluate(rules, 'write typescript code', { file: 'app.py' })
+      const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'ls -la' }))
       expect(result.decision).toBe('PASS')
     })
   })
 
+  // ============================================
+  // Priority ordering
+  // ============================================
+
+  describe('priority ordering', () => {
+    it('DENY wins over ALLOW regardless of priority', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'ALLOW_ALL',
+          priority: 100,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'ALLOW', instruction: 'ok' },
+        }),
+        makeRule({
+          id: 'BLOCK_SPECIFIC',
+          priority: 50,
+          conditions: [
+            { kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' },
+            { kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'rm' },
+          ],
+          action: { decision: 'DENY', reason: 'dangerous' },
+        }),
+      ]
+      // Matches ALLOW_ALL only (command is 'ls', not 'rm')
+      const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'ls' }))
+      expect(result.decision).toBe('ALLOW')
+    })
+
+    it('higher priority instruction is used for ALLOW', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({ id: 'FIRST', priority: 1, conditions: [], action: { decision: 'ALLOW', instruction: 'first' } }),
+        makeRule({ id: 'SECOND', priority: 2, conditions: [], action: { decision: 'ALLOW', instruction: 'second' } }),
+      ]
+      const result = evaluator.evaluate(rules, guardCtx('read_file'))
+      expect(result.decision).toBe('ALLOW')
+      expect(result.primaryInstruction).toBe('first')
+    })
+  })
+
+  // ============================================
+  // Disabled rules
+  // ============================================
+
+  describe('disabled rules', () => {
+    it('skips disabled rules', () => {
+      const rules = [makeRule({
+        enabled: false,
+        conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+      })]
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
+      expect(result.decision).toBe('PASS')
+      expect(result.totalMatched).toBe(0)
+    })
+  })
+
+  // ============================================
+  // Edge cases
+  // ============================================
+
   describe('empty/no rules', () => {
     it('returns PASS for empty rule set', () => {
-      const result = evaluator.evaluate([], 'anything', {})
+      const result = evaluator.evaluate([], guardCtx('exec'))
       expect(result.decision).toBe('PASS')
+    })
+  })
+
+  describe('rule with empty conditions', () => {
+    it('empty conditions = always matches', () => {
+      const rules = [makeRule({
+        conditions: [],
+        action: { decision: 'ALLOW', instruction: 'always applies' },
+      })]
+      const result = evaluator.evaluate(rules, guardCtx('any_tool'))
+      expect(result.decision).toBe('ALLOW')
     })
   })
 })

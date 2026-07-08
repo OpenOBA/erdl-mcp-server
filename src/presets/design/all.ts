@@ -1,73 +1,55 @@
 /**
- * ERDL MCP Server — Design Preset Rules
+ * ERDL MCP Server — Design Preset Rules (Tool Call Guard mode)
  *
- * 3 rules for Tailwind CSS, responsive design, and accessibility.
+ * Rules match against tool_name + tool_args, per ERDL Spec §5.3.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-08
  * @license MIT
  */
 
 import type { RuleDefinition } from '../../engine/rule-definition.js'
 
-export const tailwindRules: RuleDefinition[] = [
+const UI_TOOLS = ['write_file', 'edit', 'apply_patch']
+
+export const designRules: RuleDefinition[] = [
   {
-    id: 'TW-001',
-    name: 'Tailwind-first, no inline styles',
-    description: 'Use Tailwind CSS classes. Never use inline styles or CSS modules unless absolutely necessary.',
+    id: 'DS-001',
+    name: 'tailwind_first',
+    description: 'Use Tailwind CSS. No inline styles.',
     category: 'design',
-    triggers: ['write_code', 'output_code', 'create_ui', 'write_component'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['ui', 'component', 'style', 'css', 'tailwind', 'frontend', 'react', 'vue'] },
-    ],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Use Tailwind CSS utility classes exclusively. No inline `style={{}}` props. No CSS modules unless Tailwind cannot express the design (e.g., complex animations). Prefer Tailwind\'s built-in classes: `flex`, `grid`, `text-`, `bg-`, `p-`, `m-`, `rounded-`, `shadow-`.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: UI_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Use Tailwind CSS classes. No inline styles or CSS modules unless absolutely necessary.' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'TW-002',
-    name: 'Responsive-first design',
-    description: 'Always consider mobile, tablet, and desktop. Use Tailwind breakpoint prefixes.',
+    id: 'DS-002',
+    name: 'responsive_first',
+    description: 'Mobile-first responsive design. Min 3 breakpoints.',
     category: 'design',
-    triggers: ['write_code', 'output_code', 'create_ui'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['ui', 'component', 'layout', 'responsive', 'mobile', 'desktop'] },
-    ],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Design for mobile first, then enhance for larger screens. Use Tailwind breakpoints: `sm:` (640px), `md:` (768px), `lg:` (1024px), `xl:` (1280px), `2xl:` (1536px). Test layout at 3 breakpoints minimum.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: UI_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Mobile-first design. At least 3 breakpoints: sm, md, lg (Tailwind default).' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
   {
-    id: 'A11Y-001',
-    name: 'Accessibility basics',
-    description: 'Ensure keyboard navigation, color contrast, and ARIA labels where needed.',
+    id: 'DS-003',
+    name: 'a11y_basics',
+    description: 'Accessibility basics: keyboard reachable, contrast, alt text, labels, semantic HTML.',
     category: 'design',
-    triggers: ['write_code', 'output_code', 'create_ui'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['ui', 'component', 'button', 'form', 'input', 'modal', 'aria', 'accessibility', 'a11y'] },
-    ],
-    action: {
-      decision: 'ALLOW',
-      instruction:
-        'Ensure accessibility: (1) All interactive elements are keyboard-focusable (tabIndex, onKeyDown). (2) Color contrast meets WCAG AA (4.5:1 for text). (3) Images have alt text. (4) Forms have labels associated with inputs. (5) Use semantic HTML (button, nav, main, article) instead of div-everything.',
-    },
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: UI_TOOLS }],
+    action: { decision: 'ALLOW', instruction: 'Ensure: (1) keyboard-reachable, (2) WCAG AA 4.5:1 contrast, (3) img alt, (4) form labels, (5) semantic HTML.' },
     priority: 5,
     enabled: true,
     version: 1,
     hitCount: 0,
   },
 ]
-
-export const allDesignRules: RuleDefinition[] = [...tailwindRules]

@@ -38,12 +38,12 @@ Show the simulation results and ask if the user wants to proceed.`,
       triggers: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Intent triggers',
+        description: 'Tool name triggers (e.g., ["exec", "write_file"])',
       },
       keywords: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Keywords that should trigger this rule',
+        description: 'Tool names or args values to match',
       },
       decision: {
         type: 'string',
@@ -64,6 +64,7 @@ export async function simulateHandler(args: {
   category: string
   triggers?: string[]
   keywords: string[]
+  matchField?: string
   decision: string
   instruction: string
 }) {
@@ -74,7 +75,12 @@ export async function simulateHandler(args: {
     description: args.ruleName,
     category: args.category as RuleCategory,
     triggers: args.triggers ?? [],
-    conditions: [{ kind: 'intent_contains', keywords: args.keywords }],
+    conditions: [{
+      kind: 'context_matches',
+      field: args.matchField ?? 'tool.name',
+      operator: 'in',
+      value: args.keywords,
+    }],
     action: {
       decision: args.decision as 'ALLOW' | 'DENY',
       instruction: args.decision === 'ALLOW' ? args.instruction : undefined,
@@ -89,7 +95,7 @@ export async function simulateHandler(args: {
   const scenarios = buildScenarios(args)
 
   const results = scenarios.map((sc) => {
-    const match = evaluator.simulate(tempRule, sc.intent, sc.context)
+    const match = evaluator.simulate(tempRule, sc.context)
     return {
       ...sc,
       matched: match !== null,
@@ -103,7 +109,7 @@ export async function simulateHandler(args: {
   for (const r of results) {
     const icon = r.correct ? '✅' : '⚠️'
     text += `${icon} **${r.description}**\n`
-    text += `   Intent: "${r.intent}"\n`
+    text += `   Context: ${JSON.stringify(r.context)}\n`
     text += `   Result: ${r.matched ? r.decision : 'PASS (no match)'}`
     if (!r.correct) text += ` [Expected: ${r.expectedDecision}]`
     text += '\n\n'
@@ -128,27 +134,48 @@ export async function simulateHandler(args: {
   }
 }
 
-function buildScenarios(args: { ruleName: string; keywords: string[]; decision: string; instruction: string }) {
+function buildScenarios(args: { ruleName: string; keywords: string[]; decision: string; instruction: string; matchField?: string }) {
+  const field = args.matchField ?? 'tool.name'
   const isBlockRule = args.decision === 'DENY'
   const kw = args.keywords.join(', ')
+
+  // Tool call guard context
+  function ctx(value: unknown): Record<string, unknown> {
+    if (field === 'tool.name') return { 'tool.name': value }
+    // For tool.args.* fields, construct nested context
+    const parts = field.split('.')
+    const nested: Record<string, unknown> = {}
+    let node: Record<string, unknown> = nested
+    for (let i = 0; i < parts.length - 1; i++) {
+      node[parts[i]] = {}
+      node = node[parts[i]] as Record<string, unknown>
+    }
+    node[parts[parts.length - 1]] = value
+    // Also provide flattened access
+    nested[field] = value
+    if (field.startsWith('tool.args.')) {
+      nested['tool.name'] = 'test_tool'
+    }
+    return nested
+  }
 
   if (isBlockRule) {
     return [
       {
         description: `${args.ruleName} — should BLOCK`,
-        intent: `I need to do something with ${args.keywords[0]}`,
-        context: {},
+        intent: '',
+        context: ctx(args.keywords[0]),
         expectedDecision: 'DENY' as const,
       },
       {
-        description: `${args.ruleName} — should NOT block (different intent)`,
-        intent: 'I need to do something completely different',
-        context: {},
+        description: `${args.ruleName} — should NOT block (different tool)`,
+        intent: '',
+        context: ctx('safe_tool'),
         expectedDecision: 'NONE' as const,
       },
       {
-        description: `${args.ruleName} — should NOT block (related but different)`,
-        intent: `I need to check ${args.keywords[0]} alternatives`,
+        description: `${args.ruleName} — should NOT block (empty context)`,
+        intent: '',
         context: {},
         expectedDecision: 'NONE' as const,
       },
@@ -157,22 +184,22 @@ function buildScenarios(args: { ruleName: string; keywords: string[]; decision: 
 
   return [
     {
-      description: `${args.ruleName} — should match (keywords: ${kw})`,
-      intent: `I need to do something with ${args.keywords[0]}`,
-      context: {},
+      description: `${args.ruleName} — should match (${field}: ${kw})`,
+      intent: '',
+      context: ctx(args.keywords[0]),
       expectedDecision: 'ALLOW' as const,
     },
     {
-      description: `${args.ruleName} — should not match (different intent)`,
-      intent: 'I need to do something completely different',
-      context: {},
+      description: `${args.ruleName} — should not match (different ${field})`,
+      intent: '',
+      context: ctx('unrelated'),
       expectedDecision: 'NONE' as const,
     },
     {
-      description: `${args.ruleName} — edge case (partial keyword overlap)`,
-      intent: `I need to check if this is related to ${args.keywords[0]}`,
+      description: `${args.ruleName} — edge case (empty context)`,
+      intent: '',
       context: {},
-      expectedDecision: 'ALLOW' as const,
+      expectedDecision: 'NONE' as const,
     },
   ]
 }

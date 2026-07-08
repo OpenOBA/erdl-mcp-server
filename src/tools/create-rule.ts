@@ -48,12 +48,12 @@ The rule is saved to ~/.openoba/rules/ and takes effect immediately (no restart 
       triggers: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Intent triggers (e.g., ["write_code", "output_typescript"])',
+        description: 'Tool names that should trigger this rule (e.g., ["exec", "write_file"])',
       },
       keywords: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Keywords that should trigger this rule in the intent string',
+        description: 'Tool names or arg values to match against',
       },
       decision: {
         type: 'string',
@@ -101,12 +101,16 @@ export async function createRuleHandler(args: {
     description: args.naturalLanguage,
     category,
     triggers: args.triggers ?? [],
-    conditions: [
-      {
-        kind: 'intent_contains',
-        keywords: args.keywords ?? [],
-      },
-    ],
+    conditions: args.keywords && args.keywords.length > 0
+      ? [
+          {
+            kind: 'context_matches' as const,
+            field: 'tool.name',
+            operator: 'in' as const,
+            value: args.keywords,
+          },
+        ]
+      : [],
     action: {
       decision: args.decision as 'ALLOW' | 'DENY',
       instruction: args.decision === 'ALLOW' ? args.instruction : undefined,

@@ -17,41 +17,74 @@ const evaluator = new Evaluator()
 
 export const evaluateToolDef = {
   name: 'erdl_evaluate',
-  title: 'ERDL Rule Evaluator',
-  description: `Evaluate a planned action against your ERDL rules BEFORE you execute it.
+  title: 'ERDL Action Guard — Tool Call Interceptor',
+  description: `ERDL Action Guard: evaluates Agent's planned Tool Call against loaded rules BEFORE execution.
 
-Call this tool when:
-- About to output code → checks coding rules
-- About to write content → checks writing rules  
-- About to add dependencies → checks dependency rules
-- About to create UI → checks design rules
-- User asks you to do something sensitive
+This is the protocol-level guard (ERDL Spec §3.6). The Agent Host MUST call this
+before executing any Tool Call. The Guard cannot be bypassed.
 
-RESPONSE MEANING:
-- "ALLOW": Action is permitted. Follow the instruction exactly.
-- "DENY": Action is blocked. Present the reason to the user. Do NOT proceed.
-- "PASS": No matching rules. Use your best judgment.`,
+Parameters follow ERDL Spec §5.3 MCP Tool Declaration:
+- tool_name: the MCP tool being called (e.g., "exec", "write_file")  
+- tool_args: the arguments being passed to the tool
+- agent_id: optional agent identity for audit context
+- session_id: optional session identifier for audit chain
+
+RESPONSE:
+- "ALLOW": Tool call permitted. Follow instruction if provided.
+- "DENY": Tool call blocked. Do NOT execute. Show reason to user.
+- "REQUEST_HUMAN": Human approval required before execution.
+- "CORRECT": Tool call permitted with corrected parameters.
+- "PASS": No matching rules. Tool call permitted.`,
 
   inputSchema: {
     type: 'object',
     properties: {
-      intent: {
+      tool_name: {
         type: 'string',
-        description: 'What you are about to do (e.g., "write code", "git commit", "write blog post", "add dependency")',
+        description: 'Name of the tool being called (e.g., "exec", "write_file", "web_search")',
       },
-      context: {
+      tool_args: {
         type: 'object',
-        description: 'Relevant context: file type, programming language, platform, project name, etc.',
+        description: 'Arguments being passed to the tool',
         additionalProperties: true,
       },
+      agent_id: {
+        type: 'string',
+        description: 'Optional agent identity for audit context',
+      },
+      session_id: {
+        type: 'string',
+        description: 'Optional session identifier for audit chain',
+      },
     },
-    required: ['intent'],
+    required: ['tool_name'],
   },
 }
 
-export async function evaluateHandler(args: { intent: string; context?: Record<string, unknown> }) {
+export async function evaluateHandler(args: {
+  tool_name: string
+  tool_args?: Record<string, unknown>
+  agent_id?: string
+  session_id?: string
+}) {
   const rules = ruleStore.getAll()
-  const result: EvaluationResult = evaluator.evaluate(rules, args.intent, args.context ?? {})
+
+  // Build guard context from Tool Call parameters (ERDL Spec §5.3)
+  const guardContext: Record<string, unknown> = {
+    'tool.name': args.tool_name,
+    'tool.args': args.tool_args ?? {},
+    ...(args.agent_id ? { 'agent.id': args.agent_id } : {}),
+    ...(args.session_id ? { 'session.id': args.session_id } : {}),
+  }
+
+  // Flatten tool_args for direct field access (e.g., tool.args.command)
+  if (args.tool_args) {
+    for (const [key, value] of Object.entries(args.tool_args)) {
+      guardContext[`tool.args.${key}`] = value
+    }
+  }
+
+  const result: EvaluationResult = evaluator.evaluate(rules, guardContext)
 
   // Record hits
   for (const match of result.matchedRules) {
@@ -63,7 +96,7 @@ export async function evaluateHandler(args: { intent: string; context?: Record<s
       content: [
         {
           type: 'text' as const,
-          text: `🔵 PASS: No rules matched for "${args.intent}". (${result.totalEvaluated} rules checked)`,
+          text: `🔵 PASS: No rules matched for tool call "${args.tool_name}". (${result.totalEvaluated} rules checked)`,
         },
       ],
       structuredContent: {

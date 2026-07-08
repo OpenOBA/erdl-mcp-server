@@ -9,13 +9,15 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { allCodingRules } from '../../src/presets/coding/all.js'
+import { codingRules } from '../../src/presets/coding/all.js'
 import { allWritingRules } from '../../src/presets/writing/all.js'
-import { allDesignRules } from '../../src/presets/design/all.js'
+import { designRules } from '../../src/presets/design/all.js'
 
-const allRules = [...allCodingRules, ...allWritingRules, ...allDesignRules]
+const allRules = [...codingRules, ...allWritingRules, ...designRules]
 
 describe('Preset Rules', () => {
+  const allCodingRules = codingRules
+  const allDesignRules = designRules
   it('has exactly 20 preset rules', () => {
     expect(allRules).toHaveLength(20)
   })
@@ -77,9 +79,9 @@ describe('Preset Rules', () => {
     for (const rule of allRules) {
       for (const cond of rule.conditions) {
         expect(cond.kind).toBeTruthy()
-        if (cond.kind === 'intent_contains') {
-          expect(cond.keywords).toBeDefined()
-          expect(cond.keywords!.length).toBeGreaterThan(0)
+        if (cond.kind === 'context_matches') {
+          expect(cond.field).toBeTruthy()
+          expect(cond.operator).toBeTruthy()
         }
       }
     }

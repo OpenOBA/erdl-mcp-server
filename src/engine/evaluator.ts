@@ -16,17 +16,15 @@ const safeExpr = new SafeExpr()
 export class Evaluator {
   evaluate(
     rules: RuleDefinition[],
-    intent: string,
     context: Record<string, unknown>,
   ): EvaluationResult {
-    const extendedCtx = { intent, ...context }
     const enabled = rules.filter((r) => r.enabled)
     const sorted = [...enabled].sort((a, b) => a.priority - b.priority)
 
     const matchedRules: RuleMatch[] = []
 
     for (const rule of sorted) {
-      const matched = rule.conditions.length === 0 || rule.conditions.every((cond) => this.evaluateLeaf(cond, extendedCtx))
+      const matched = rule.conditions.length === 0 || rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
       if (matched) {
         matchedRules.push({
           ruleId: rule.id,
@@ -111,11 +109,10 @@ export class Evaluator {
 
   simulate(
     rule: RuleDefinition,
-    intent: string,
     context: Record<string, unknown>,
   ): RuleMatch | null {
     if (!rule.enabled) return null
-    const ctx = { intent, ...context }
+    const ctx = { ...context }
     const matched = rule.conditions.length === 0 || rule.conditions.every((cond) => this.evaluateLeaf(cond, ctx))
     if (!matched) return null
 
@@ -225,6 +222,9 @@ export class Evaluator {
   }
 
   private resolveField(field: string, context: Record<string, unknown>): unknown {
+    // Try direct key lookup first (for dotted keys like 'tool.name')
+    if (field in context) return context[field]
+    // Fall back to nested path resolution
     return field.split('.').reduce<unknown>((obj, key) => {
       if (obj === null || obj === undefined || typeof obj !== 'object') return undefined
       return (obj as Record<string, unknown>)[key]

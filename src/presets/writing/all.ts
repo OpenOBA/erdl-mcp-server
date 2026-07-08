@@ -1,29 +1,28 @@
 /**
- * ERDL MCP Server — Writing Preset Rules
+ * ERDL MCP Server — Writing Preset Rules (Tool Call Guard mode)
  *
- * 7 rules for tone, formatting, and avoiding AI jargon.
+ * Rules match against tool_name + tool_args, per ERDL Spec §5.3.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-08
  * @license MIT
  */
 
 import type { RuleDefinition } from '../../engine/rule-definition.js'
 
+const CONTENT_TOOLS = ['write_file', 'edit', 'apply_patch']
+
 export const toneRules: RuleDefinition[] = [
   {
     id: 'WR-001',
-    name: 'No cliché openings',
-    description: 'Avoid overused Chinese/English opening phrases that sound like AI-generated text.',
+    name: 'no_cliche',
+    description: 'No cliché openings in Chinese or English.',
     category: 'writing',
-    triggers: ['write_content', 'write_blog', 'write_post', 'write_article', 'write_tweet'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['write blog', 'write post', 'write article', 'write tweet', 'write content', '写文章', '写文案', 'blog post', 'newsletter'] },
-    ],
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CONTENT_TOOLS }],
     action: {
       decision: 'ALLOW',
-      instruction:
-        'DO NOT use cliché openings: "在当今时代" "众所周知" "值得注意的是" "随着...的发展" "In today\'s digital age" "It is noteworthy that". Start directly with the point.',
+      instruction: 'DO NOT use cliché openings: "在当今时代" "众所周知" "值得注意的是" "随着...的发展" "In today\'s digital age" "It is noteworthy that". Start directly.',
     },
     priority: 3,
     enabled: true,
@@ -32,17 +31,14 @@ export const toneRules: RuleDefinition[] = [
   },
   {
     id: 'WR-002',
-    name: 'Direct and forceful tone',
-    description: 'Write with conviction. Subject-first sentences. Avoid passive voice.',
+    name: 'direct_tone',
+    description: 'Active voice. Short, punchy sentences.',
     category: 'writing',
-    triggers: ['write_content', 'write_blog', 'write_post'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['write blog', 'write post', 'write article', 'write content', 'write copy', 'write marketing'] },
-    ],
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CONTENT_TOOLS }],
     action: {
       decision: 'ALLOW',
-      instruction:
-        'Use active voice. Subject-first. Short, punchy sentences. Avoid hedging: "might" "could potentially" "it is possible that". State your position clearly.',
+      instruction: 'Use active voice. Subject-first. Avoid hedging: "might" "could potentially". State your position clearly.',
     },
     priority: 5,
     enabled: true,
@@ -51,17 +47,14 @@ export const toneRules: RuleDefinition[] = [
   },
   {
     id: 'WR-003',
-    name: 'Short sentences preferred',
-    description: 'Keep sentences under 25 words. Break up long paragraphs.',
+    name: 'short_sentences',
+    description: 'Keep sentences under 25 words.',
     category: 'writing',
-    triggers: ['write_content', 'write_blog'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['write blog', 'write article', 'write long', 'long-form', 'blog post'] },
-    ],
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CONTENT_TOOLS }],
     action: {
       decision: 'ALLOW',
-      instruction:
-        'Keep sentences under 25 words. Break paragraphs at 3-4 sentences max. Use bullet points for lists. A wall of text loses readers.',
+      instruction: 'Keep sentences under 25 words. Break paragraphs at 3-4 sentences max. Use bullet points for lists.',
     },
     priority: 10,
     enabled: true,
@@ -70,17 +63,14 @@ export const toneRules: RuleDefinition[] = [
   },
   {
     id: 'WR-004',
-    name: 'No AI jargon',
-    description: 'Avoid words that scream "written by AI": empower, leverage, ecosystem, synergy, unlock potential.',
+    name: 'no_ai_jargon',
+    description: 'No AI buzzwords: 赋能 抓手 闭环 降本增效 leverage etc.',
     category: 'writing',
-    triggers: ['write_content', 'write_blog', 'write_post', 'write_article'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['write content', 'write blog', 'write marketing', 'write copy', '写文案', '写宣传'] },
-    ],
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CONTENT_TOOLS }],
     action: {
       decision: 'ALLOW',
-      instruction:
-        'NO AI buzzwords: "赋能" "抓手" "闭环" "底层逻辑" "降本增效" "颗粒度" — and in English: "empower" "leverage" "ecosystem" "synergy" "unlock potential". Use plain, human language.',
+      instruction: 'NO AI buzzwords: "赋能" "抓手" "闭环" "底层逻辑" "降本增效". English: "empower" "leverage" "ecosystem" "synergy". Use plain human language.',
     },
     priority: 5,
     enabled: true,
@@ -92,17 +82,14 @@ export const toneRules: RuleDefinition[] = [
 export const formattingRules: RuleDefinition[] = [
   {
     id: 'FMT-001',
-    name: 'Chinese-English spacing',
-    description: 'Insert a half-width space between Chinese and English/numbers.',
+    name: 'chinese_english_spacing',
+    description: 'Space between Chinese and English/numbers.',
     category: 'writing',
-    triggers: ['write_content', 'write_blog', 'write_post'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['中文', 'Chinese', 'write chinese', '中文内容', '中文文章', 'Chinese content'] },
-    ],
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CONTENT_TOOLS }],
     action: {
       decision: 'ALLOW',
-      instruction:
-        'Add a space between Chinese characters and English/numbers. Correct: "用 Agent 编码" ✗ "用Agent编码". Correct: "2026 年" ✗ "2026年" (unless it\'s a year expression in context).',
+      instruction: 'Add space between Chinese and English/numbers. Correct: "用 Agent 编码", not "用Agent编码".',
     },
     priority: 3,
     enabled: true,
@@ -111,17 +98,14 @@ export const formattingRules: RuleDefinition[] = [
   },
   {
     id: 'FMT-002',
-    name: 'Heading hierarchy',
-    description: 'Use proper heading levels. Only one H1 per document.',
+    name: 'heading_hierarchy',
+    description: 'One H1. H2→H3, no skip levels.',
     category: 'writing',
-    triggers: ['write_content', 'write_blog', 'write_document'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['write document', 'write markdown', 'write article', 'documentation', 'readme'] },
-    ],
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CONTENT_TOOLS }],
     action: {
       decision: 'ALLOW',
-      instruction:
-        'One H1 (#) per document (the title). Use H2 for sections, H3 for subsections. Never skip levels (H2 → H4 without H3).',
+      instruction: 'One H1 per document. H2 for sections, H3 for subsections. Never skip levels.',
     },
     priority: 10,
     enabled: true,
@@ -130,17 +114,14 @@ export const formattingRules: RuleDefinition[] = [
   },
   {
     id: 'FMT-003',
-    name: 'List format consistency',
-    description: 'Keep list formatting consistent: same punctuation style, same sentence structure.',
+    name: 'list_consistency',
+    description: 'Consistent list formatting and punctuation.',
     category: 'writing',
-    triggers: ['write_content', 'write_blog'],
-    conditions: [
-      { kind: 'intent_contains', keywords: ['bullet list', 'numbered list', 'checklist', 'write list', 'format list'] },
-    ],
+    triggers: ['write_file', 'edit', 'apply_patch'],
+    conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'in', value: CONTENT_TOOLS }],
     action: {
       decision: 'ALLOW',
-      instruction:
-        'All items in a list should follow the same grammatical structure (all nouns, or all verb phrases). End with consistent punctuation — either all periods or no periods, not mixed.',
+      instruction: 'All list items same grammatical structure. Consistent end punctuation.',
     },
     priority: 15,
     enabled: true,
