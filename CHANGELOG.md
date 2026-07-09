@@ -7,6 +7,13 @@ All notable changes to ERDL MCP Server will be documented in this file.
 ### Added
 - CHANGELOG.md
 - GitHub Actions CI (typecheck + build + test + pack, Node 18/20/22)
+- Compact badge card output for front-end rendering
+
+### Fixed
+- ALLOW advisory rules no longer block DENY evaluation
+- Removed incorrect override=true from advisory ALLOW rules
+- EN-008 always-match DENY fixed (was blocking all coding operations)
+- EN-006 added real conditions (Set-Content/Out-File match)
 
 ## [1.0.0-alpha.5] — 2026-07-09
 
