@@ -2,15 +2,18 @@
  * ERDL MCP Server — Main Entry
  *
  * Assembles the MCP server with all tools and starts on stdio transport.
- * One command: npx @openoba/erdl-mcp
+ * Usage:
+ *   npx @openoba/erdl-mcp              Start the MCP server
+ *   npx @openoba/erdl-mcp --uninstall  Remove all ERDL files and configurations
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-07 · updated 2026-07-09 (uninstall)
  * @license MIT
  */
 
-import { readFileSync } from 'node:fs'
-import { resolve, dirname } from 'node:path'
+import { readFileSync, rmSync, existsSync } from 'node:fs'
+import { resolve, dirname, join } from 'node:path'
+import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 
@@ -31,6 +34,44 @@ import { listRulesToolDef, listRulesHandler } from './tools/list-rules.js'
 import { createRuleToolDef, createRuleHandler } from './tools/create-rule.js'
 import { simulateToolDef, simulateHandler } from './tools/simulate.js'
 import { explainToolDef, explainHandler } from './tools/explain.js'
+
+// ============================================
+// CLI Commands
+// ============================================
+
+/** Handle --uninstall: remove all ERDL traces from the system */
+function uninstall(): void {
+  const home = homedir()
+  const dirs = [
+    join(home, '.openoba', 'rules'),
+    join(home, '.openoba'),
+  ]
+
+  console.error('[erdl-mcp] 🧹 ERDL Uninstaller')
+  console.error('[erdl-mcp] This will remove all ERDL MCP Server files and configurations.')
+
+  let removed = 0
+  for (const dir of dirs) {
+    if (existsSync(dir)) {
+      try {
+        rmSync(dir, { recursive: true, force: true })
+        console.error(`[erdl-mcp]   Removed: ${dir}`)
+        removed++
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`[erdl-mcp]   Failed to remove ${dir}: ${msg}`)
+      }
+    }
+  }
+
+  console.error(`[erdl-mcp] ✅ Uninstall complete. ${removed} directories removed.`)
+  console.error('[erdl-mcp] To reinstall: npx @openoba-ai/erdl-mcp')
+  process.exit(0)
+}
+
+if (process.argv.includes('--uninstall')) {
+  uninstall()
+}
 
 // ============================================
 // Tool Registry
