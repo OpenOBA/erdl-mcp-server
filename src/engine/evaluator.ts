@@ -215,6 +215,11 @@ export class Evaluator {
     // --- Legacy intent_matches ---
     if (cond.kind === 'intent_matches') {
       if (!cond.pattern) return false
+      // ReDoS protection: reject patterns with nested quantifiers
+      if (/[(][^)]*[+*][^)]*[+*]/.test(cond.pattern)) {
+        console.error(`[erdl-mcp] ReDoS risk: rejecting pattern "${cond.pattern}"`)
+        return false
+      }
       try {
         return new RegExp(cond.pattern, 'i').test(String(context.intent ?? ''))
       } catch {

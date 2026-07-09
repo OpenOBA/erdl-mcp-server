@@ -57,8 +57,8 @@ The rule is saved to ~/.openoba/rules/ and takes effect immediately (no restart 
       },
       decision: {
         type: 'string',
-        enum: ['ALLOW', 'DENY'],
-        description: 'ALLOW with instruction, or DENY with reason',
+        enum: ['ALLOW', 'DENY', 'CORRECT', 'REQUEST_HUMAN'],
+        description: 'ALLOW with instruction, or DENY with reason, CORRECT with correction, REQUEST_HUMAN for approval',
       },
       instruction: {
         type: 'string',

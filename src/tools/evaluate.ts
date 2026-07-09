@@ -68,6 +68,11 @@ export async function evaluateHandler(args: {
   agent_id?: string
   session_id?: string
 }) {
+  // Runtime input validation (MCP SDK doesn't enforce inputSchema at runtime)
+  if (typeof args.tool_name !== 'string' || !args.tool_name) {
+    return { content: [{ type: 'text' as const, text: 'Invalid input: tool_name must be a non-empty string' }], isError: true }
+  }
+
   const rules = ruleStore.getAll()
 
   // Build guard context from Tool Call parameters (ERDL Spec §5.3)

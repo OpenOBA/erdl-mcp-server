@@ -146,8 +146,6 @@ function tokenizeWhen(expr: string): Token[] {
       else tokens.push({ kind: 'identifier', value: word, pos: i })
       i = j
       continue
-      i = j
-      continue
     }
 
     throw new Error(`Unexpected character '${ch}' at position ${i} in: ${expr}`)

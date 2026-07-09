@@ -13,7 +13,7 @@ Say it once. It becomes a rule. Your Agent never forgets.
 ## Quick Start
 
 ```bash
-npx -y @openoba/erdl-mcp
+npx -y @openoba-ai/erdl-mcp
 ```
 
 That's it. Your Agent now has a brain.
@@ -145,7 +145,13 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 
 ## First-Run Experience
 
-On first launch, `erdl-mcp` auto-deploys 30 preset rules to `~/.openoba/rules/`:
+On first launch, `erdl-mcp` loads 30 built-in preset rules from its TypeScript source. No YAML files are created on disk — presets are in-memory by default. If you want them as YAML files for editing, run:
+
+```bash
+npx @openoba-ai/erdl-mcp --export-presets
+```
+
+Your personal rules live in `~/.openoba/rules/`:
 
 ```
 ~/.openoba/rules/

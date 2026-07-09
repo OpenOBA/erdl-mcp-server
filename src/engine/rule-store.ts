@@ -114,9 +114,12 @@ export class RuleStore {
   /** Reload all rules (called on file change) */
   reload(): number {
     this.rules.clear()
+    // Reload built-in presets first (they are always-active baseline)
+    this.loadBuiltinPresets()
+    // Then overlay user rules from filesystem
     const dir = RuleStore.getRulesDir()
     const count = this.loadFromDir(dir)
-    console.error(`[erdl-mcp] Reloaded ${count} rules`)
+    console.error(`[erdl-mcp] Reloaded ${this.rules.size} rules (${count} from filesystem)`)
 
     if (this.onChangeCallback) {
       this.onChangeCallback()
@@ -439,7 +442,8 @@ export class RuleStore {
         }))
       }
     } catch (err) {
-      console.error(`[erdl-mcp] Failed to compile when expression: ${expr}`, err instanceof Error ? err.message : String(err))
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[erdl-mcp] Failed to compile when expression: "${expr}" — error: ${msg}. Rule will use empty conditions (always matches). Check YAML syntax.`)
     }
 
     return []
