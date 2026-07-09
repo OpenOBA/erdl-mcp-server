@@ -85,10 +85,14 @@ export class RuleStore {
       console.error(`[erdl-mcp] Created rules directory: ${dir}`)
     }
 
-    // Load preset rules from TypeScript source (shipped with the package)
+    // Load built-in presets from TypeScript source (shipped with the package)
     this.loadBuiltinPresets()
 
     const loaded = this.loadFromDir(dir)
+
+    // Re-apply built-in presets to ensure they override any stale YAML versions.
+    // This guarantees that npm update → new preset rules take effect immediately.
+    this.loadBuiltinPresets()
 
     // Start watching for changes
     this.startWatch(dir)
@@ -99,16 +103,41 @@ export class RuleStore {
 
   /**
    * Load built-in preset rules from TypeScript source.
-   * These ship with the package and are updated on each release.
+   * These ship with the package, are updated on each release, and ALWAYS OVERRIDE
+   * any user-edited YAML versions of the same rules.
    */
   private loadBuiltinPresets(): void {
-    const presets = [...codingRules, ...designRules, ...allWritingRules, ...engineeringRules]
-    for (const rule of presets) {
-      if (!this.rules.has(rule.id)) {
-        this.rules.set(rule.id, rule)
+    const presets = [...codingRules, ...engineeringRules, ...allWritingRules, ...designRules]
+    let added = 0
+    let updated = 0
+    let cleaned = 0
+
+    // Phase 1: Remove any YAML-loaded rules that share the same NAME as a built-in.
+    // This catches stale legacy IDs (e.g., "honesty_with_henry" from old YAML vs "EN-001" in new code).
+    const builtinNames = new Set(presets.map((r) => r.name))
+    for (const [id, rule] of this.rules) {
+      if (builtinNames.has(rule.name) && !presets.some((p) => p.id === id)) {
+        this.rules.delete(id)
+        cleaned++
       }
     }
-    console.error(`[erdl-mcp] Loaded ${presets.length} built-in preset rules`)
+
+    // Phase 2: Insert/override all built-in presets
+    for (const rule of presets) {
+      const existing = this.rules.get(rule.id)
+      if (existing) {
+        this.rules.set(rule.id, rule)
+        updated++
+      } else {
+        this.rules.set(rule.id, rule)
+        added++
+      }
+    }
+
+    if (cleaned > 0) {
+      console.error(`[erdl-mcp] Cleaned ${cleaned} stale legacy rules (overridden by built-in presets)`)
+    }
+    console.error(`[erdl-mcp] Built-in presets: ${presets.length} (${added} new, ${updated} updated${cleaned > 0 ? ', ' + cleaned + ' stale cleaned' : ''})`)
   }
 
   /** Reload all rules (called on file change) */
