@@ -2,16 +2,20 @@
  * ERDL MCP Server — Main Entry
  *
  * Assembles the MCP server with all tools and starts on stdio transport.
+ *
  * Usage:
- *   npx @openoba/erdl-mcp              Start the MCP server
- *   npx @openoba/erdl-mcp --uninstall  Remove all ERDL files and configurations
+ *   npx @openoba-ai/erdl-mcp               Start the MCP server
+ *   npx @openoba-ai/erdl-mcp --version     Show version
+ *   npx @openoba-ai/erdl-mcp --help        Show help
+ *   npx @openoba-ai/erdl-mcp --upgrade     Upgrade to latest version
+ *   npx @openoba-ai/erdl-mcp --uninstall   Remove all ERDL files
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07 · updated 2026-07-09 (uninstall)
+ * @since 2026-07-07 · updated 2026-07-09 (upgrade + version check)
  * @license MIT
  */
 
-import { readFileSync, rmSync, existsSync } from 'node:fs'
+import { readFileSync, rmSync, existsSync, writeFileSync, readdirSync } from 'node:fs'
 import { resolve, dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -22,6 +26,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const pkg = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf-8'))
 const VERSION = pkg.version as string
+const PKG_NAME = pkg.name as string
+
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
@@ -38,6 +44,35 @@ import { explainToolDef, explainHandler } from './tools/explain.js'
 // ============================================
 // CLI Commands
 // ============================================
+
+const REGISTRY_URL = 'https://registry.npmjs.org'
+const VERSION_CHECK_FILE = join(homedir(), '.openoba', '.last_version_check')
+
+function showHelp(): void {
+  console.error(`
+🦞 ERDL MCP Server v${VERSION}
+
+  ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules.
+  30 built-in presets. Unlimited private rules. Free forever.
+
+Usage:
+  npx ${PKG_NAME}               Start the MCP server (stdio transport)
+  npx ${PKG_NAME} --version     Show version
+  npx ${PKG_NAME} --help        Show this help
+  npx ${PKG_NAME} --upgrade     Upgrade to the latest version
+  npx ${PKG_NAME} --uninstall   Remove all ERDL files and configurations
+
+Rules directory: ~/.openoba/rules/
+Docs: https://openoba.com/erdl
+Source: https://github.com/OpenOBA/erdl-mcp-server
+`)
+  process.exit(0)
+}
+
+function showVersion(): void {
+  console.error(`ERDL MCP Server v${VERSION}`)
+  process.exit(0)
+}
 
 /** Handle --uninstall: remove all ERDL traces from the system */
 function uninstall(): void {
@@ -69,8 +104,105 @@ function uninstall(): void {
   process.exit(0)
 }
 
+/** Handle --upgrade: clear npm cache and re-pull latest version */
+function upgrade(): void {
+  console.error(`[erdl-mcp] ⚡ ERDL MCP Server v${VERSION}`)
+  console.error('[erdl-mcp] Checking for latest version...')
+
+  const npmNpxDir = join(homedir(), '.npm', '_npx')
+  let cleaned = 0
+
+  if (existsSync(npmNpxDir)) {
+    try {
+      for (const entry of readdirSync(npmNpxDir)) {
+        const nodeModules = join(npmNpxDir, entry, 'node_modules', '@openoba-ai', 'erdl-mcp')
+        if (existsSync(nodeModules)) {
+          rmSync(nodeModules, { recursive: true, force: true })
+          cleaned++
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[erdl-mcp] ⚠️  Could not clean npx cache: ${msg}`)
+    }
+  }
+
+  // Also clean version check timestamp to force re-check
+  if (existsSync(VERSION_CHECK_FILE)) {
+    try { rmSync(VERSION_CHECK_FILE, { force: true }) } catch { /* ok */ }
+  }
+
+  console.error(`[erdl-mcp] ✅ Upgrade complete. Cleaned ${cleaned} cached version(s).`)
+  console.error('[erdl-mcp] Next start will use the latest version:')
+  console.error(`[erdl-mcp]   npx ${PKG_NAME}`)
+  process.exit(0)
+}
+
+// Dispatch CLI commands (exit early, don't start MCP server)
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  showHelp()
+}
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  showVersion()
+}
 if (process.argv.includes('--uninstall')) {
   uninstall()
+}
+if (process.argv.includes('--upgrade')) {
+  upgrade()
+}
+
+// ============================================
+// Version Check (non-blocking, background)
+// ============================================
+
+async function checkForUpdates(): Promise<void> {
+  // Throttle: check at most once every 24 hours
+  try {
+    if (existsSync(VERSION_CHECK_FILE)) {
+      const lastCheck = parseInt(readFileSync(VERSION_CHECK_FILE, 'utf-8') || '0', 10)
+      if (Date.now() - lastCheck < 24 * 60 * 60 * 1000) return
+    }
+  } catch { /* file doesn't exist, proceed */ }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 5000)
+
+  try {
+    const resp = await fetch(`${REGISTRY_URL}/-/package/${PKG_NAME}/dist-tags`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+
+    if (!resp.ok) return
+    const tags = (await resp.json()) as Record<string, string>
+    const latest = tags.latest
+
+    if (latest && latest !== VERSION) {
+      // Compare semver
+      const [latestMajor, latestMinor, latestPatch] = latest.split('.').map(Number)
+      const [curMajor, curMinor, curPatch] = VERSION.split('.').map(Number)
+      const isNewer =
+        latestMajor > curMajor ||
+        (latestMajor === curMajor && latestMinor > curMinor) ||
+        (latestMajor === curMajor && latestMinor === curMinor && latestPatch > curPatch)
+
+      if (isNewer) {
+        console.error(`\n⚡ ERDL MCP Server v${latest} is available! (you have v${VERSION})`)
+        console.error(`   Upgrade: npx ${PKG_NAME} --upgrade`)
+        console.error(`   Changelog: https://github.com/OpenOBA/erdl-mcp-server/blob/master/CHANGELOG.md\n`)
+      }
+    }
+  } catch {
+    // Network error or timeout → silently skip. Don't block startup.
+  }
+
+  // Record last check time
+  try {
+    const dir = join(homedir(), '.openoba')
+    if (!existsSync(dir)) return
+    writeFileSync(VERSION_CHECK_FILE, String(Date.now()), 'utf-8')
+  } catch { /* ok */ }
 }
 
 // ============================================
@@ -156,6 +288,9 @@ export async function main(): Promise<void> {
   console.error(`[erdl-mcp] 📁 Rules: ${ruleStore.count()} loaded from ~/.openoba/rules/`)
   console.error(`[erdl-mcp] 🔧 Tools: ${TOOLS.map((t) => t.def.name).join(', ')}`)
   console.error(`[erdl-mcp] ✅ Ready for Agent connections`)
+
+  // 7. Background version check (non-blocking, throttled to once per 24h)
+  checkForUpdates().catch(() => { /* silence */ })
 }
 
 // Entry point
