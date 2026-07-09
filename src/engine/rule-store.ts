@@ -51,6 +51,7 @@ interface YamlRule {
 interface YamlFile {
   rules?: YamlRule[] | Record<string, unknown>
   agent?: { role?: string; observes?: string[] }
+  metadata?: Record<string, unknown>
 }
 
 // ============================================
@@ -260,11 +261,36 @@ export class RuleStore {
   }
 
   /**
-   * Tolerant YAML parser for .erdl.yaml files.
-   * Uses regex line-matching instead of js-yaml to avoid strict indentation issues
-   * with multi-line or quoted values in then: fields.
+   * Parse YAML content from .erdl.yaml files.
+   *
+   * Strategy: regex-tolerant parser for simplified ERDL format first
+   * (handles `then: ALLOW "message"` syntax that js-yaml rejects).
+   * Falls back to js-yaml for standard-compliant YAML with nested structures.
    */
   private parseYamlRaw(content: string): YamlFile | null {
+    // Primary: regex-based tolerant parser (handles ERDL simplified format)
+    const simpleResult = this.parseYamlSimple(content)
+    if (simpleResult) return simpleResult
+
+    // Fallback: js-yaml for standard YAML with nested structures
+    try {
+      const parsed = yaml.load(content) as YamlFile
+      if (parsed && (parsed.rules || parsed.agent || parsed.metadata)) {
+        return parsed
+      }
+    } catch {
+      // both failed
+    }
+
+    return null
+  }
+
+  /**
+   * Simplified regex-based YAML parser.
+   * Handles flat key-value rules within a `rules:` block.
+   * Does NOT support nested arrays/objects — those go through js-yaml.
+   */
+  private parseYamlSimple(content: string): YamlFile | null {
     const result: YamlFile = { rules: {} as Record<string, unknown> }
     const lines = content.split('\n')
     let currentRule: Record<string, unknown> | null = null
@@ -274,11 +300,9 @@ export class RuleStore {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
 
-      // Skip comments and empty lines
       const trimmed = line.trim()
       if (!trimmed || trimmed.startsWith('#')) continue
 
-      // Rule name: 2-space indent (e.g., "  no_any:")
       const ruleMatch = line.match(/^  (\w[\w-]*):$/)
       if (ruleMatch && !line.startsWith('    ')) {
         if (currentRule && currentRule.id) {
@@ -292,7 +316,6 @@ export class RuleStore {
 
       if (!currentRule) continue
 
-      // Property: 4-space indent (e.g., "    when: ...")
       const propMatch = line.match(/^    (\w+):\s*(.*)$/)
       if (propMatch) {
         if (currentKey && currentValue) {
@@ -303,14 +326,12 @@ export class RuleStore {
         continue
       }
 
-      // Continuation line (6+ spaces indent) for multi-line values
       if (currentKey && line.match(/^      \S/)) {
         currentValue += ' ' + line.trim()
         continue
       }
     }
 
-    // Save last rule
     if (currentRule && currentRule.id) {
       if (currentKey && currentValue) {
         currentRule[currentKey] = currentValue.trim()
@@ -318,18 +339,8 @@ export class RuleStore {
       (result.rules as Record<string, unknown>)[currentRule.id as string] = currentRule
     }
 
-    // Handle empty result
     const ruleKeys = Object.keys(result.rules as Record<string, unknown>)
-    if (ruleKeys.length === 0) {
-      // Try js-yaml as fallback for simple files (YAML 1.2 schema to avoid Norway problem)
-      try {
-        return yaml.load(content, { schema: yaml.JSON_SCHEMA }) as YamlFile
-      } catch {
-        return null
-      }
-    }
-
-    return result
+    return ruleKeys.length > 0 ? result : null
   }
 
   private parseRule(raw: YamlRule, sourceFile: string): RuleDefinition | null {
