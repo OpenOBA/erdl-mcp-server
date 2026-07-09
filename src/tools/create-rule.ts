@@ -12,6 +12,7 @@
 import { ruleStore } from '../engine/rule-store.js'
 import type { RuleDefinition, RuleCategory } from '../engine/rule-definition.js'
 import { getUsageTracker } from '../engine/usage-tracker.js'
+import { i18n } from '../i18n/index.js'
 
 /** Auto-incrementing rule ID counter per category */
 const categoryCounters: Record<string, number> = {
@@ -24,15 +25,7 @@ const categoryCounters: Record<string, number> = {
 export const createRuleToolDef = {
   name: 'erdl_create_rule',
   title: 'Create ERDL Rule',
-  description: `Create a new ERDL rule from natural language.
-Use this when the user corrects your behavior and wants you to "remember" it.
-
-EXAMPLE SCENARIOS:
-- User: "Never use 'any' types" → Create: coding rule, intent: "write typescript code", DENY if "any" appears
-- User: "Don't start with '在当今时代'" → Create: writing rule, intent: "write blog post", DENY
-- User: "Always use Tailwind, never inline styles" → Create: design rule, intent: "create UI", ALLOW with instruction
-
-The rule is saved to ~/.openoba/rules/ and takes effect immediately (no restart needed).`,
+  description: i18n().createRule.description,
 
   inputSchema: {
     type: 'object',

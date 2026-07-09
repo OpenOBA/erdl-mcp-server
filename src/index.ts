@@ -37,6 +37,11 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 
 import { ruleStore } from './engine/rule-store.js'
+import { detectLanguage } from './i18n/index.js'
+
+// Initialize language detection at import time (before tool registrations)
+detectLanguage()
+
 import { evaluateToolDef, evaluateHandler } from './tools/evaluate.js'
 import { listRulesToolDef, listRulesHandler } from './tools/list-rules.js'
 import { createRuleToolDef, createRuleHandler } from './tools/create-rule.js'

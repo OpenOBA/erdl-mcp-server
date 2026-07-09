@@ -12,38 +12,14 @@
 import { Evaluator } from '../engine/evaluator.js'
 import { ruleStore } from '../engine/rule-store.js'
 import type { EvaluationResult } from '../engine/rule-definition.js'
+import { i18n } from '../i18n/index.js'
 
 const evaluator = new Evaluator()
 
 export const evaluateToolDef = {
   name: 'erdl_evaluate',
   title: 'ERDL Action Guard — Tool Call Interceptor',
-  description: `ERDL Action Guard — evaluates planned tool call against loaded rules BEFORE execution.
-
-YOU MUST call this BEFORE every tool call (exec, write_file, edit, web_search, etc).
-This is MANDATORY. The Guard cannot be bypassed.
-
-After calling, check the decision:
-- ALLOW → proceed with the tool call, follow any instructions
-- DENY → STOP. Do not execute the tool. Tell the user what was blocked.
-- CORRECT → fix the request and retry
-- REQUEST_HUMAN → ask the user for approval before proceeding
-
-Always show the result to the user as a badge card.
-
-Parameters follow ERDL Spec §5.3 MCP Tool Declaration:
-- tool_name: the MCP tool being called (e.g., "exec", "write_file")  
-- tool_args: the arguments being passed to the tool
-- agent_id: optional agent identity for audit context
-- session_id: optional session identifier for audit chain
-
-RESPONSE (compact badge card format):
-- "ALLOW": ✅ ERDL Guard · N rules
-- "DENY": 🛑 ERDL Blocked · reason
-- "REQUEST_HUMAN": 👤 ERDL Approval · reason
-- "CORRECT": 🔧 ERDL Correct · correction
-- "EMERGENCY_HALT": 🚨 ERDL HALT · reason
-- "PASS": 🔵 ERDL Pass · N rules checked`,
+  description: i18n().evaluate.description,
 
   inputSchema: {
     type: 'object',
@@ -167,11 +143,4 @@ export async function evaluateHandler(args: {
   }
 }
 
-const BADGE: Record<string, { emoji: string; label: string; color: string }> = {
-  ALLOW: { emoji: '✅', label: 'ERDL Guard', color: 'green' },
-  PASS: { emoji: '🔵', label: 'ERDL Pass', color: 'blue' },
-  DENY: { emoji: '🛑', label: 'ERDL Blocked', color: 'red' },
-  CORRECT: { emoji: '🔧', label: 'ERDL Correct', color: 'orange' },
-  REQUEST_HUMAN: { emoji: '👤', label: 'ERDL Approval', color: 'yellow' },
-  EMERGENCY_HALT: { emoji: '🚨', label: 'ERDL HALT', color: 'red' },
-}
+const BADGE = i18n().badge

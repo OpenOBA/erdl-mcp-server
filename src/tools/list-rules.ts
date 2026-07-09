@@ -9,13 +9,12 @@
  */
 
 import { ruleStore } from '../engine/rule-store.js'
+import { i18n } from '../i18n/index.js'
 
 export const listRulesToolDef = {
   name: 'erdl_list_rules',
   title: 'List ERDL Rules',
-  description: `List all currently loaded ERDL rules.
-Use this when the user asks "what rules do you have?" or wants to see what constraints are active.
-Categorize by type: coding, engineering, writing, design, security, performance, testing, compliance, accessibility, custom.`,
+  description: i18n().listRules.description,
 
   inputSchema: {
     type: 'object',
@@ -49,7 +48,7 @@ export async function listRulesHandler(args: { category?: string }) {
       content: [
         {
           type: 'text' as const,
-          text: 'No rules loaded yet. Create your first rule with erdl_create_rule or add YAML files to ~/.openoba/rules/.',
+          text: i18n().listRules.noRules,
         },
       ],
       structuredContent: { count: 0, rules: [] },
@@ -63,7 +62,7 @@ export async function listRulesHandler(args: { category?: string }) {
     groups[rule.category].push(rule)
   }
 
-  let text = '## Your ERDL Rules\n\n'
+  let text = `## ${i18n().listRules.title}\n\n`
   for (const [cat, rules] of Object.entries(groups)) {
     const emoji = CAT_EMOJI[cat] ?? '📦'
     text += `### ${emoji} ${cat} (${rules.length})\n`
@@ -76,7 +75,7 @@ export async function listRulesHandler(args: { category?: string }) {
     text += '\n'
   }
 
-  text += `\nTotal: ${sorted.length} rules. Create more: use erdl_create_rule or edit ~/.openoba/rules/`
+  text += `\nTotal: ${sorted.length} ${i18n().listRules.total}`
 
   return {
     content: [{ type: 'text' as const, text }],

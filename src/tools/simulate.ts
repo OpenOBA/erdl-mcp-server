@@ -11,17 +11,14 @@
 
 import { Evaluator } from '../engine/evaluator.js'
 import type { RuleDefinition, RuleCategory } from '../engine/rule-definition.js'
+import { i18n } from '../i18n/index.js'
 
 const evaluator = new Evaluator()
 
 export const simulateToolDef = {
   name: 'erdl_simulate',
   title: 'Simulate ERDL Rule',
-  description: `Test a potential rule against 3 scenarios BEFORE creating it.
-This prevents "wishful thinking" rules that sound right but don't work.
-
-Always call this BEFORE erdl_create_rule when the user says "remember this" or "create a rule".
-Show the simulation results and ask if the user wants to proceed.`,
+  description: i18n().simulate.description,
 
   inputSchema: {
     type: 'object',

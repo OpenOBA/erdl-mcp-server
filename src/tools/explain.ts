@@ -11,6 +11,7 @@
 
 import { Evaluator } from '../engine/evaluator.js'
 import { ruleStore } from '../engine/rule-store.js'
+import { i18n } from '../i18n/index.js'
 import type { EvaluationResult } from '../engine/rule-definition.js'
 
 const evaluator = new Evaluator()
@@ -18,13 +19,7 @@ const evaluator = new Evaluator()
 export const explainToolDef = {
   name: 'erdl_explain',
   title: 'Explain ERDL Decision',
-  description: `Show the FULL decision trail for the last action.
-Answers "why did you do that?" — shows every rule that was checked and whether it fired.
-
-Use this when:
-- User asks "why did you act that way?"
-- User is confused about a DENY or unexpected ALLOW
-- You want to show transparency in your decision-making`,
+  description: i18n().explain.description,
 
   inputSchema: {
     type: 'object',
