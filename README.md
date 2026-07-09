@@ -1,12 +1,24 @@
-# @openoba-ai/erdl-mcp
+# ERDL MCP Server
 
-## Your Agent finally remembers what you taught it.
+> **Give your Agent deterministic rules. Say it once. Never repeat yourself.**
 
-**The Problem**: You told your Agent "no `any` types" yesterday.  
-Today it used `any` again. The 5th time you're repeating yourself.
+[![npm version](https://img.shields.io/npm/v/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
+[![license](https://img.shields.io/npm/l/@openoba-ai/erdl-mcp)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
+[![tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
 
-**The Solution**: `erdl-mcp` gives your Agent **muscle memory**.  
-Say it once. It becomes a rule. Your Agent never forgets.
+**ERDL** (Entity-Rule Definition Language) is a deterministic rule engine for AI agents. 30 built-in presets. Unlimited personal rules. Free forever.
+
+---
+
+## Why ERDL?
+
+| Without ERDL | With ERDL |
+|-------------|-----------|
+| "Don't use `any`" — forgotten in 5 turns | Rules enforced **deterministically**, every tool call |
+| "Write shorter sentences" — ignored | Writing rules fire before every output |
+| "Confirm before adding deps" — skipped | **Blocked** until you confirm |
+| "Why did you do that?" — no answer | `erdl_explain` shows the full decision trail |
 
 ---
 
@@ -16,159 +28,154 @@ Say it once. It becomes a rule. Your Agent never forgets.
 npx -y @openoba-ai/erdl-mcp
 ```
 
-That's it. Your Agent now has a brain.
+30 rules active immediately. No account. No configuration. No API key.
+
+**中文用户：**
+```bash
+npx -y @openoba-ai/erdl-mcp --lang zh
+```
 
 ---
 
-## What It Does
+## What's Included
 
-| Your Agent | Without ERDL | With ERDL |
-|-----------|-------------|-----------|
-| Writes TypeScript | Uses `any`, `@ts-ignore`, bad naming | Checks 5 coding rules before output |
-| Writes content | "在当今数字化时代..." cliché openings | Writing tone rules fire automatically |
-| Adds dependencies | Installs packages without asking | Blocked → asks for confirmation first |
-| Creates UI | Inline styles with random colors | Tailwind-first, responsive, accessible |
+### 30 Built-in Rules
 
----
+| Category | Rules | Scope |
+|----------|:-----:|-------|
+| `coding` | 10 | TypeScript quality, Git discipline, dependency hygiene |
+| `engineering` | 10 | Workflow discipline: honesty, no shortcuts, pipeline gates |
+| `writing` | 7 | Tone, formatting, clarity |
+| `design` | 3 | Tailwind-first, responsive, accessible |
 
-## Five Tools
+### 5 MCP Tools
 
-| Tool | When It's Used |
-|------|---------------|
-| `erdl_evaluate` | Agent checks rules before every output |
+| Tool | Purpose |
+|------|---------|
+| `erdl_evaluate` | Action Guard — check rules before every tool call |
 | `erdl_simulate` | Test a rule against 3 scenarios before creating |
-| `erdl_create_rule` | "Remember this" → rule saved immediately |
-| `erdl_list_rules` | "What rules do you have?" |
-| `erdl_explain` | "Why did you do that?" → full decision trail |
+| `erdl_create_rule` | Create a rule from natural language |
+| `erdl_list_rules` | List all active rules |
+| `erdl_explain` | Full decision trail for any action |
+
+### MCP Resources
+
+| Resource | Content |
+|----------|---------|
+| `erdl://rules/list` | All rules as JSON |
+| `erdl://status` | Server runtime status |
 
 ---
 
-## Built-in Rules (30 rules, ready to go)
+## Installation
 
-### 🧑‍💻 Coding (10 rules)
-- TypeScript: No `any`, no `@ts-ignore`, naming conventions, promise handling, no nested ternaries
-- Git: Commit message format, one change per commit, PR title emoji prefix
-- Dependencies: Confirm before adding, prefer existing packages
+### Any MCP Client
 
-### 🔧 Engineering (10 rules)
-- Core discipline: honesty, stay on target, no shortcuts, docs with delivery
-- Safety: no stash accumulation, no PowerShell Set-Content, no force push main
-- Quality: pipeline gate before push, design before code, global-first thinking
-
-### ✍️ Writing (7 rules)
-- Tone: No cliché openings, direct language, short sentences, no AI jargon
-- Formatting: Chinese-English spacing, heading hierarchy, list consistency
-
-### 🎨 Design (3 rules)
-- Tailwind-first, responsive-first, accessibility (a11y)
-
----
-
-## Supported Agents
-
-| Agent | Setup |
-|-------|-------|
-| **OpenClaw** | `openclaw config set mcpServers.erdl.command "npx"` and `openclaw config set mcpServers.erdl.args '["-y", "@openoba/erdl-mcp"]'` |
-| **Hermes** | Add to `~/.hermes/config.yaml` under `mcp_servers` |
-| **Claude Code** | Add to `.claude/mcp.json` |
-| **Cursor** | Add to `.cursor/mcp.json` |
-| **Claude Desktop** | Add via MCP configuration UI |
-| **Any MCP Host** | Standard stdio config |
-
----
-
-## The Complete Loop
-
-```
-Agent makes a mistake
-        ↓
-You: "Don't do that. Remember this."
-        ↓
-Agent: erdl_simulate → 3 scenario previews
-        ↓
-Agent: erdl_create_rule → saved to ~/.openoba/rules/
-        ↓
-Next time: erdl_evaluate fires → Agent knows better
-        ↓
-You: "Why did you do that?" → Agent: erdl_explain (full trail)
+```json
+{
+  "mcpServers": {
+    "erdl": {
+      "command": "npx",
+      "args": ["-y", "@openoba-ai/erdl-mcp"]
+    }
+  }
+}
 ```
 
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or the equivalent path on your OS.
+
+### Cursor
+
+Add to `.cursor/mcp.json` in your project root.
+
+### OpenClaw
+
+```bash
+openclaw mcp set erdl '{"command":"npx","args":["-y","@openoba-ai/erdl-mcp"]}'
+```
+
+### VS Code / GitHub Copilot
+
+Add to `.vscode/mcp.json` or the Copilot MCP configuration.
+
 ---
 
-## Custom Rules
+## Creating Your First Rule
 
-Create YAML files in `~/.openoba/rules/`:
+```
+You: "Never use `any` in TypeScript."
+
+Agent: 1. erdl_simulate → tests the rule against 3 scenarios
+       2. erdl_create_rule → saves to ~/.openoba/rules/
+       3. Rule is now active. Next `any` will be blocked.
+
+You: "Why did you reject my code?"
+Agent: erdl_explain → shows every rule that fired
+```
+
+Or create rules manually in `~/.openoba/rules/`:
 
 ```yaml
-# ~/.openoba/rules/custom/my-rules.yaml
 rules:
   - id: MY-001
-    name: My custom rule
-    description: What I want my Agent to always remember
-    category: custom
-    triggers: [write_code, output_code]
-    conditions:
-      - kind: intent_contains
-        keywords: [typescript, function]
-    action:
-      decision: ALLOW
-      instruction: Always wrap API calls in try/catch with proper error handling.
-    priority: 5
+    name: no_console_log
+    description: Don't commit console.log statements
+    category: coding
+    triggers: [write_file, edit, apply_patch]
+    when: "tool.args.path match \"\\.tsx?$\""
+    then: DENY "Remove console.log before committing"
+    priority: 10
     enabled: true
 ```
 
-Rules reload automatically when you save — no restart needed.
+[Full tutorial →](./docs/tutorial-create-rules.md)
 
 ---
 
-## Why ERDL vs SKILL.md?
-
-| | SKILL.md (Prompt-based) | ERDL MCP Server |
-|---|---|---|
-| Execution | LLM "tries" to follow | **Deterministic engine** — guaranteed |
-| Visibility | Invisible, can't tell if it worked | `erdl_explain` shows every decision |
-| Reliability | LLM may ignore or forget | **Zero hallucination** — condition match is mathematical |
-| Testing | Manual | `erdl_simulate` with 3 auto-scenarios |
-| Portability | agentskills.io only | **All MCP-compatible Agents** |
-
-ERDL rules don't suggest. They don't hope. They **enforce**.
-
----
-
-## Documentation
-
-- **[Tool API Reference](docs/tool-api-reference.md)** — Full input/output schemas for all 5 tools
-- **[Rule File Format](docs/tool-api-reference.md#rule-file-format)** — YAML schema for custom rules
-- **[GitHub](https://github.com/OpenOBA/erdl-mcp-server)** — Source code + issues
-
----
-
-## First-Run Experience
-
-On first launch, `erdl-mcp` loads 30 built-in preset rules from its TypeScript source. No YAML files are created on disk — presets are in-memory by default. If you want them as YAML files for editing, run:
+## CLI Reference
 
 ```bash
-npx @openoba-ai/erdl-mcp --export-presets
+npx @openoba-ai/erdl-mcp               # Start MCP server
+npx @openoba-ai/erdl-mcp --lang zh     # Chinese mode
+npx @openoba-ai/erdl-mcp --upgrade     # Upgrade to latest
+npx @openoba-ai/erdl-mcp --uninstall   # Clean removal
+npx @openoba-ai/erdl-mcp --help        # Full usage
 ```
 
-Your personal rules live in `~/.openoba/rules/`:
+---
 
-```
-~/.openoba/rules/
-├── coding/openoba-presets.yaml      (10 rules)
-├── engineering/openoba-presets.yaml (10 rules)
-├── writing/openoba-presets.yaml     (7 rules)
-├── design/openoba-presets.yaml      (3 rules)
-```
+## Available on MCP Platforms
 
-Your Agent immediately starts checking them. No setup. No training.
+| Platform | Status |
+|----------|--------|
+| **[npm](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)** | ✅ Published |
+| **[Glama](https://glama.ai)** | Coming soon |
+| **[Smithery](https://smithery.ai)** | Coming soon |
+| **[MCPize](https://mcpize.com)** | Coming soon |
+| **[PulseMCP](https://pulsemcp.com)** | Coming soon |
+| **[mcp.so](https://mcp.so)** | Coming soon |
+
+---
+
+## Roadmap
+
+- [x] 30 built-in presets (coding, engineering, writing, design)
+- [x] 5 MCP tools + 2 resources
+- [x] Chinese/English auto-switch (`--lang zh`)
+- [x] Usage tracking + contextual Pro recommendations
+- [x] Zero-dependency SafeExpr engine
+- [x] MIT open source
+- [ ] Rules Store — discover and install community rule packs
+- [ ] Team rules — share rules across your organization
+- [ ] Audit dashboard — track rule usage and compliance
+- [ ] ERDL Verified — certified rule packs for enterprise compliance
 
 ---
 
 ## License
 
-MIT · OpenOBA · [openoba.com](https://openoba.com)
+MIT · [OpenOBA](https://openoba.com) · [@OpenOBA](https://github.com/OpenOBA)
 
----
-
-Built by [OpenOBA](https://openoba.com) — AI Agents that actually work.
+Built by AI + Human. Deterministic architecture, not prompt engineering.
