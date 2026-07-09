@@ -165,11 +165,11 @@ describe('Preset Rules', () => {
       expect(rule!.override).toBeUndefined()
     })
 
-    it('EN-001 honesty_with_henry is ALLOW with override', () => {
+    it('EN-001 honesty_with_henry is ALLOW without override', () => {
       const rule = allEngineeringRules.find((r) => r.id === 'EN-001')
       expect(rule).toBeDefined()
       expect(rule!.action.decision).toBe('ALLOW')
-      expect(rule!.override).toBe(true)
+      expect(rule!.override).toBeUndefined()
       expect(rule!.priority).toBe(1)
     })
   })
