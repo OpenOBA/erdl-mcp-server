@@ -2,6 +2,12 @@
 
 All notable changes to ERDL MCP Server will be documented in this file.
 
+## [1.0.0-beta.1] — 2026-07-09
+
+### Added
+- CHANGELOG.md
+- GitHub Actions CI (typecheck + build + test + pack, Node 18/20/22)
+
 ## [1.0.0-alpha.5] — 2026-07-09
 
 ### Added
