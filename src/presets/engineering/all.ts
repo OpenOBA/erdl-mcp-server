@@ -10,7 +10,7 @@
  * @license MIT
  */
 
-import type { RuleDefinition } from '../../engine/rule-definition.js'
+import type { RuleDefinition, RuleCondition } from '../../engine/rule-definition.js'
 
 const CODING_TOOLS = ['write_file', 'edit', 'apply_patch', 'exec', 'write']
 const ALL_TOOLS = [
@@ -116,7 +116,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '禁用 Set-Content/Out-File。损坏 UTF-8。',
     category: 'coding',
     triggers: ['exec'],
-    conditions: [] as any[],
+    conditions: [{ kind: 'context_matches' as const, field: 'tool.args.command', operator: 'match' as const, value: 'Set-Content|Out-File' }],
     action: { decision: 'DENY', reason: '禁用 Set-Content/Out-File。会损坏 UTF-8 编码。' },
     priority: 4,
     enabled: true,
@@ -146,8 +146,8 @@ export const engineeringRules: RuleDefinition[] = [
     description: '禁止临时方案/workaround/hack。现在就从根本上解决。',
     category: 'coding',
     triggers: ['write_file', 'edit', 'apply_patch', 'exec'],
-    conditions: [] as any[],
-    action: { decision: 'DENY', reason: '禁止临时方案。不要在任务中接受 workaround 或 hack。从根本上解决。' },
+    conditions: [] as RuleCondition[],
+    action: { decision: 'ALLOW', instruction: '禁止临时方案。不要在任务中接受 workaround 或 hack。从根本上解决。' },
     priority: 5,
     enabled: true,
     version: 1,

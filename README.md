@@ -1,4 +1,4 @@
-# @openoba/erdl-mcp
+# @openoba-ai/erdl-mcp
 
 ## Your Agent finally remembers what you taught it.
 
@@ -43,12 +43,17 @@ That's it. Your Agent now has a brain.
 
 ---
 
-## Built-in Rules (20 rules, ready to go)
+## Built-in Rules (30 rules, ready to go)
 
 ### 🧑‍💻 Coding (10 rules)
 - TypeScript: No `any`, no `@ts-ignore`, naming conventions, promise handling, no nested ternaries
 - Git: Commit message format, one change per commit, PR title emoji prefix
 - Dependencies: Confirm before adding, prefer existing packages
+
+### 🔧 Engineering (10 rules)
+- Core discipline: honesty, stay on target, no shortcuts, docs with delivery
+- Safety: no stash accumulation, no PowerShell Set-Content, no force push main
+- Quality: pipeline gate before push, design before code, global-first thinking
 
 ### ✍️ Writing (7 rules)
 - Tone: No cliché openings, direct language, short sentences, no AI jargon
@@ -134,19 +139,20 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 
 - **[Tool API Reference](docs/tool-api-reference.md)** — Full input/output schemas for all 5 tools
 - **[Rule File Format](docs/tool-api-reference.md#rule-file-format)** — YAML schema for custom rules
-- **[GitHub](https://github.com/openoba/erdl-mcp-server)** — Source code + issues
+- **[GitHub](https://github.com/OpenOBA/erdl-mcp-server)** — Source code + issues
 
 ---
 
 ## First-Run Experience
 
-On first launch, `erdl-mcp` auto-deploys 20 preset rules to `~/.openoba/rules/`:
+On first launch, `erdl-mcp` auto-deploys 30 preset rules to `~/.openoba/rules/`:
 
 ```
 ~/.openoba/rules/
-├── coding/openoba-presets.yaml   (10 rules)
-├── writing/openoba-presets.yaml  (7 rules)
-├── design/openoba-presets.yaml   (3 rules)
+├── coding/openoba-presets.yaml      (10 rules)
+├── engineering/openoba-presets.yaml (10 rules)
+├── writing/openoba-presets.yaml     (7 rules)
+├── design/openoba-presets.yaml      (3 rules)
 ```
 
 Your Agent immediately starts checking them. No setup. No training.

@@ -151,18 +151,19 @@ describe('Preset Rules', () => {
       }
     })
 
-    it('EN-006 no_powershell_setcontent is DENY with always-match', () => {
+    it('EN-006 no_powershell_setcontent is DENY with match condition', () => {
       const rule = allEngineeringRules.find((r) => r.id === 'EN-006')
       expect(rule).toBeDefined()
       expect(rule!.action.decision).toBe('DENY')
-      expect(rule!.conditions).toHaveLength(0) // always matches
+      expect(rule!.conditions.length).toBeGreaterThan(0) // has actual matching conditions
+      expect(rule!.override).toBe(true)
     })
 
-    it('EN-008 no_shortcut is DENY without override', () => {
+    it('EN-008 no_shortcut is ALLOW with instruction (advisory)', () => {
       const rule = allEngineeringRules.find((r) => r.id === 'EN-008')
       expect(rule).toBeDefined()
-      expect(rule!.action.decision).toBe('DENY')
-      expect(rule!.override).toBeUndefined()
+      expect(rule!.action.decision).toBe('ALLOW')
+      expect(rule!.action.instruction).toBeTruthy()
     })
 
     it('EN-001 honesty_with_henry is ALLOW without override', () => {
