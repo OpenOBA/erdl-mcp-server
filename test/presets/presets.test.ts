@@ -12,14 +12,17 @@ import { describe, it, expect } from 'vitest'
 import { codingRules } from '../../src/presets/coding/all.js'
 import { allWritingRules } from '../../src/presets/writing/all.js'
 import { designRules } from '../../src/presets/design/all.js'
+import { engineeringRules } from '../../src/presets/engineering/all.js'
 
-const allRules = [...codingRules, ...allWritingRules, ...designRules]
+const allRules = [...codingRules, ...allWritingRules, ...designRules, ...engineeringRules]
 
 describe('Preset Rules', () => {
   const allCodingRules = codingRules
   const allDesignRules = designRules
-  it('has exactly 20 preset rules', () => {
-    expect(allRules).toHaveLength(20)
+  const allEngineeringRules = engineeringRules
+
+  it('has exactly 30 preset rules', () => {
+    expect(allRules).toHaveLength(30)
   })
 
   it('coding has 10 rules', () => {
@@ -32,6 +35,10 @@ describe('Preset Rules', () => {
 
   it('design has 3 rules', () => {
     expect(allDesignRules).toHaveLength(3)
+  })
+
+  it('engineering has 10 rules', () => {
+    expect(allEngineeringRules).toHaveLength(10)
   })
 
   it('all rules have unique IDs', () => {
@@ -99,5 +106,71 @@ describe('Preset Rules', () => {
     for (const rule of allowRules) {
       expect(rule.action.instruction).toBeTruthy()
     }
+  })
+
+  // ============================================
+  // Engineering rule integrity
+  // ============================================
+
+  describe('engineering rules integrity', () => {
+    it('all engineering rules have unique IDs', () => {
+      const ids = allEngineeringRules.map((r) => r.id)
+      const unique = new Set(ids)
+      expect(unique.size).toBe(allEngineeringRules.length)
+    })
+
+    it('all engineering rules have required fields', () => {
+      for (const rule of allEngineeringRules) {
+        expect(rule.id).toBeTruthy()
+        expect(rule.name).toBeTruthy()
+        expect(rule.description).toBeTruthy()
+        expect(rule.action.decision).toBeTruthy()
+        expect(rule.priority).toBeGreaterThan(0)
+      }
+    })
+
+    it('all engineering rules are enabled', () => {
+      for (const rule of allEngineeringRules) {
+        expect(rule.enabled).toBe(true)
+      }
+    })
+
+    it('engineering DENY rules have a reason', () => {
+      const denyRules = allEngineeringRules.filter((r) => r.action.decision === 'DENY')
+      expect(denyRules.length).toBeGreaterThan(0)
+      for (const rule of denyRules) {
+        expect(rule.action.reason).toBeTruthy()
+      }
+    })
+
+    it('engineering override rules have override=true', () => {
+      const overrideRules = allEngineeringRules.filter((r) => r.override)
+      expect(overrideRules.length).toBeGreaterThan(0)
+      for (const rule of overrideRules) {
+        expect(rule.override).toBe(true)
+      }
+    })
+
+    it('EN-006 no_powershell_setcontent is DENY with always-match', () => {
+      const rule = allEngineeringRules.find((r) => r.id === 'EN-006')
+      expect(rule).toBeDefined()
+      expect(rule!.action.decision).toBe('DENY')
+      expect(rule!.conditions).toHaveLength(0) // always matches
+    })
+
+    it('EN-008 no_shortcut is DENY without override', () => {
+      const rule = allEngineeringRules.find((r) => r.id === 'EN-008')
+      expect(rule).toBeDefined()
+      expect(rule!.action.decision).toBe('DENY')
+      expect(rule!.override).toBeUndefined()
+    })
+
+    it('EN-001 honesty_with_henry is ALLOW with override', () => {
+      const rule = allEngineeringRules.find((r) => r.id === 'EN-001')
+      expect(rule).toBeDefined()
+      expect(rule!.action.decision).toBe('ALLOW')
+      expect(rule!.override).toBe(true)
+      expect(rule!.priority).toBe(1)
+    })
   })
 })
