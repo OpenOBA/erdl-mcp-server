@@ -32,6 +32,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 
 import { ruleStore } from './engine/rule-store.js'
@@ -218,6 +220,85 @@ const TOOLS = [
 ] as const
 
 // ============================================
+// Resources
+// ============================================
+
+function registerResources(server: Server): void {
+  const rules = ruleStore.getAll()
+
+  // list all available resources
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [
+      {
+        uri: 'erdl://rules/list',
+        name: 'All Rules',
+        description: `All ${rules.length} loaded ERDL rules as a JSON array`,
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'erdl://status',
+        name: 'Server Status',
+        description: 'ERDL MCP Server runtime status',
+        mimeType: 'application/json',
+      },
+    ],
+  }))
+
+  // read a specific resource
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri
+
+    if (uri === 'erdl://rules/list') {
+      const currentRules = ruleStore.getAll()
+      const data = currentRules.map((r) => ({
+        id: r.id,
+        name: r.name,
+        category: r.category,
+        description: r.description,
+        decision: r.action.decision,
+        priority: r.priority,
+        enabled: r.enabled,
+        scopeLevel: r.scopeLevel ?? null,
+        hitCount: r.hitCount ?? 0,
+      }))
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(data, null, 2),
+        }],
+      }
+    }
+
+    if (uri === 'erdl://status') {
+      const currentRules = ruleStore.getAll()
+      const cats: Record<string, number> = {}
+      for (const r of currentRules) {
+        cats[r.category] = (cats[r.category] || 0) + 1
+      }
+      const status = {
+        server: 'erdl-mcp',
+        version: VERSION,
+        rules: {
+          total: currentRules.length,
+          byCategory: cats,
+        },
+        agentIdentity: ruleStore.getAgentIdentity(),
+      }
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify(status, null, 2),
+        }],
+      }
+    }
+
+    throw new Error(`Unknown resource: ${uri}`)
+  })
+}
+
+// ============================================
 // Main
 // ============================================
 
@@ -234,11 +315,15 @@ export async function main(): Promise<void> {
     {
       capabilities: {
         tools: { listChanged: true },
+        resources: {},
       },
     },
   )
 
-  // 3. Register tool list handler
+  // 3. Register resources (rule data exposed as readable resources)
+  registerResources(server)
+
+  // 4. Register tool list handler
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS.map(({ def }) => ({
       name: def.name,
@@ -248,7 +333,7 @@ export async function main(): Promise<void> {
     })),
   }))
 
-  // 4. Register tool call handler
+  // 5. Register tool call handler
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params
 
@@ -269,7 +354,7 @@ export async function main(): Promise<void> {
     }
   })
 
-  // 5. Handle rule changes → notify clients
+  // 6. Handle rule changes → notify clients
   ruleStore.onRulesChanged(() => {
     server.notification({
       method: 'notifications/tools/list_changed',
@@ -278,7 +363,7 @@ export async function main(): Promise<void> {
     })
   })
 
-  // 6. Start stdio transport
+  // 7. Start stdio transport
   const transport = new StdioServerTransport()
   await server.connect(transport)
 

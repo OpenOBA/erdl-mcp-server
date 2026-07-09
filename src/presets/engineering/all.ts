@@ -5,7 +5,7 @@
  * All rules are scopeLevel=1 (personal discipline).
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-08 · updated 2026-07-09 (scope + category fix)
+ * @since 2026-07-08 · updated 2026-07-09 (scope + category fix + typesafe conditions)
  * @license MIT
  */
 
@@ -30,6 +30,9 @@ const ALL_TOOLS = [
   'browser',
 ]
 
+// Type-safe empty conditions
+const ALWAYS = [] as RuleCondition[]
+
 export const engineeringRules: RuleDefinition[] = [
   {
     id: 'EN-001',
@@ -37,7 +40,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '诚实汇报: 遇到问题如实知会 Henry。不隐瞒、不绕过、不假装没问题。',
     category: 'engineering',
     triggers: ALL_TOOLS.slice(),
-    conditions: [] as any[], // always matches
+    conditions: ALWAYS,
     action: {
       decision: 'ALLOW',
       instruction: '诚实汇报: 遇到问题如实知会 Henry。不隐瞒、不绕过、不假装没问题。不知道就说不知道。做错了就承认。',
@@ -53,8 +56,8 @@ export const engineeringRules: RuleDefinition[] = [
     name: 'stay_on_target',
     description: '长程任务: 先对齐目标再动手。不偏离 Spec。',
     category: 'engineering',
-    triggers: ['write_file', 'edit', 'apply_patch', 'exec', 'apply_patch'],
-    conditions: [] as any[], // always matches
+    triggers: ['write_file', 'edit', 'apply_patch', 'exec'],
+    conditions: ALWAYS,
     action: {
       decision: 'ALLOW',
       instruction: '长程任务: 先对齐目标再动手。不偏离 Spec。修改前: 读源码→问题分析→Henry 确认→动手。',
@@ -71,7 +74,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '全局优先: 不为当前任务破坏一致性。不追求速度，以质量为准。',
     category: 'engineering',
     triggers: CODING_TOOLS,
-    conditions: [] as any[],
+    conditions: ALWAYS,
     action: {
       decision: 'ALLOW',
       instruction: '全局优先: 不为当前任务破坏一致性。不追求速度，以质量为准。',
@@ -88,7 +91,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: 'Spec 先行: 先与 ERDL Spec 对齐。不先写代码再补 Spec。',
     category: 'engineering',
     triggers: ['write_file', 'edit', 'apply_patch'],
-    conditions: [] as any[],
+    conditions: ALWAYS,
     action: {
       decision: 'ALLOW',
       instruction: 'Spec 先行: 先与 ERDL Spec 对齐。不先写代码再补 Spec。',
@@ -105,7 +108,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '禁止 stash 累积。所有变更入 commit。',
     category: 'engineering',
     triggers: ['exec'],
-    conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'stash' } as const],
+    conditions: [{ kind: 'context_matches' as const, field: 'tool.args.command', operator: 'contains' as const, value: 'stash' }],
     action: { decision: 'DENY', reason: '禁止 git stash 累积。所有变更必须入 commit。' },
     priority: 4,
     enabled: true,
@@ -133,7 +136,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '推送前: typecheck 0 error → build 0 error → test all pass。',
     category: 'engineering',
     triggers: ['exec'],
-    conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'push' } as const],
+    conditions: [{ kind: 'context_matches' as const, field: 'tool.args.command', operator: 'contains' as const, value: 'push' }],
     action: {
       decision: 'ALLOW',
       instruction: '推送前: typecheck 0 error → build 0 error → test all pass。',
@@ -150,7 +153,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '禁止临时方案/workaround/hack。现在就从根本上解决。',
     category: 'engineering',
     triggers: ['write_file', 'edit', 'apply_patch', 'exec'],
-    conditions: [] as RuleCondition[],
+    conditions: ALWAYS,
     action: { decision: 'ALLOW', instruction: '禁止临时方案。不要在任务中接受 workaround 或 hack。从根本上解决。' },
     priority: 5,
     enabled: true,
@@ -164,7 +167,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '文档即交付。代码写完不算完。',
     category: 'engineering',
     triggers: ['write_file', 'edit', 'apply_patch', 'exec'],
-    conditions: [] as any[],
+    conditions: ALWAYS,
     action: {
       decision: 'ALLOW',
       instruction: '文档即交付。代码写完不算完，文档更新才算交付完成。',
@@ -181,7 +184,7 @@ export const engineeringRules: RuleDefinition[] = [
     description: '禁止 force push master。',
     category: 'engineering',
     triggers: ['exec'],
-    conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'match', value: 'push.*(-f|--force)' } as const],
+    conditions: [{ kind: 'context_matches' as const, field: 'tool.args.command', operator: 'match' as const, value: 'push.*(-f|--force)' }],
     action: { decision: 'DENY', reason: '禁止 force push master/main。' },
     priority: 1,
     enabled: true,
