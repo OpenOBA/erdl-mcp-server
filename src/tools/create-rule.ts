@@ -11,6 +11,7 @@
 
 import { ruleStore } from '../engine/rule-store.js'
 import type { RuleDefinition, RuleCategory } from '../engine/rule-definition.js'
+import { getUsageTracker } from '../engine/usage-tracker.js'
 
 /** Auto-incrementing rule ID counter per category */
 const categoryCounters: Record<string, number> = {
@@ -136,7 +137,12 @@ export async function createRuleHandler(args: {
 
   const filePath = await ruleStore.saveRule(rule)
 
-  return {
+  // Track usage + check for Pro recommendations
+  const tracker = getUsageTracker()
+  tracker.trackRule({ id: ruleId, category: args.category, hasConditions: rule.conditions.length > 0 })
+  const recommendation = tracker.checkRecommendations()
+
+  const result = {
     content: [
       {
         type: 'text' as const,
@@ -152,4 +158,15 @@ export async function createRuleHandler(args: {
       decision: args.decision,
     },
   }
+
+  // Append recommendation if triggered
+  if (recommendation) {
+    result.content.push({
+      type: 'text' as const,
+      text: `\n💡 **${recommendation.message}**\n\n👉 [升级到 Pro →](https://openoba.com/erdl/pro)`,
+    })
+    ;(result.structuredContent as Record<string, unknown>).recommendation = recommendation
+  }
+
+  return result
 }
