@@ -5,7 +5,7 @@
  * Agent should call this BEFORE outputting code, content, or making decisions.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-07 · updated 2026-07-09 (badge cards)
  * @license MIT
  */
 
@@ -29,12 +29,13 @@ Parameters follow ERDL Spec §5.3 MCP Tool Declaration:
 - agent_id: optional agent identity for audit context
 - session_id: optional session identifier for audit chain
 
-RESPONSE:
-- "ALLOW": Tool call permitted. Follow instruction if provided.
-- "DENY": Tool call blocked. Do NOT execute. Show reason to user.
-- "REQUEST_HUMAN": Human approval required before execution.
-- "CORRECT": Tool call permitted with corrected parameters.
-- "PASS": No matching rules. Tool call permitted.`,
+RESPONSE (compact badge card format):
+- "ALLOW": ✅ ERDL Guard · N rules
+- "DENY": 🛑 ERDL Blocked · reason
+- "REQUEST_HUMAN": 👤 ERDL Approval · reason
+- "CORRECT": 🔧 ERDL Correct · correction
+- "EMERGENCY_HALT": 🚨 ERDL HALT · reason
+- "PASS": 🔵 ERDL Pass · N rules checked`,
 
   inputSchema: {
     type: 'object',
@@ -91,94 +92,73 @@ export async function evaluateHandler(args: {
     ruleStore.recordHit(match.ruleId)
   }
 
+  const badge = BADGE[result.decision] ?? { emoji: '⚪', label: result.decision, color: 'gray' }
+  const decisionRules = result.matchedRules.map((r) => ({
+    id: r.ruleId,
+    name: r.ruleName,
+    decision: r.decision,
+    reason: r.reason,
+    instruction: r.instruction,
+  }))
+
+  // Unified badge card output — compact, front-end renders as inline card
   if (result.decision === 'PASS') {
     return {
-      content: [
-        {
-          type: 'text' as const,
-          text: `🔵 PASS: No rules matched for tool call "${args.tool_name}". (${result.totalEvaluated} rules checked)`,
-        },
-      ],
-      structuredContent: {
-        decision: 'PASS' as const,
-        matchedRules: [] as string[],
-        totalEvaluated: result.totalEvaluated,
-        totalMatched: 0,
-      },
+      content: [{ type: 'text' as const, text: `${badge.emoji} ${badge.label} · ${result.totalEvaluated} rules checked` }],
+      structuredContent: { decision: 'PASS' as const, badge, totalEvaluated: result.totalEvaluated, totalMatched: 0 },
     }
   }
 
   if (result.decision === 'DENY') {
-    const rulesSummary = result.matchedRules
-      .filter((r) => r.decision === 'DENY')
-      .map((r) => `- ${r.ruleId}: ${r.reason}`)
-      .join('\n')
-
     return {
-      content: [
-        {
-          type: 'text' as const,
-          text: `🛑 DENY: Blocked by rules.\\n\\n${rulesSummary}\\n\\nDo NOT proceed.`,
-        },
-      ],
-      structuredContent: {
-        decision: 'DENY' as const,
-        reason: result.primaryReason,
-        matchedRules: result.matchedRules.map((r) => ({ id: r.ruleId, name: r.ruleName, reason: r.reason })),
-        totalEvaluated: result.totalEvaluated,
-        totalMatched: result.totalMatched,
-      },
-      isError: false,
+      content: [{ type: 'text' as const, text: `${badge.emoji} ${badge.label} · ${result.primaryReason ?? 'Blocked by rules'}` }],
+      structuredContent: { decision: 'DENY' as const, badge, reason: result.primaryReason, matchedRules: decisionRules, totalEvaluated: result.totalEvaluated, totalMatched: result.totalMatched },
     }
   }
 
   if (result.decision === 'EMERGENCY_HALT') {
     return {
-      content: [
-        { type: 'text' as const, text: `EMERGENCY_HALT: ${result.primaryReason}\nRule: ${result.matchedRules.filter(r => r.decision === 'EMERGENCY_HALT').map(r => r.ruleId).join(', ')}\n\nSTOP ALL ACTIONS IMMEDIATELY.` },
-      ],
-      structuredContent: { decision: 'EMERGENCY_HALT' as const, reason: result.primaryReason, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
+      content: [{ type: 'text' as const, text: `${badge.emoji} ${badge.label} · ${result.primaryReason ?? 'Emergency halt'}` }],
+      structuredContent: { decision: 'EMERGENCY_HALT' as const, badge, reason: result.primaryReason, matchedRules: decisionRules },
       isError: true,
     }
   }
 
   if (result.decision === 'REQUEST_HUMAN') {
     return {
-      content: [
-        { type: 'text' as const, text: `REQUEST_HUMAN: ${result.primaryReason}\nRule: ${result.matchedRules.filter(r => r.decision === 'REQUEST_HUMAN').map(r => r.ruleId).join(', ')}\n\nAsk the user for approval before proceeding.` },
-      ],
-      structuredContent: { decision: 'REQUEST_HUMAN' as const, reason: result.primaryReason, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
-      isError: false,
+      content: [{ type: 'text' as const, text: `${badge.emoji} ${badge.label} · ${result.primaryReason ?? 'Approval required'}` }],
+      structuredContent: { decision: 'REQUEST_HUMAN' as const, badge, reason: result.primaryReason, matchedRules: decisionRules },
     }
   }
 
   if (result.decision === 'CORRECT') {
     const correction = result.primaryCorrection ?? result.primaryInstruction
     return {
-      content: [
-        { type: 'text' as const, text: `CORRECT: ${correction}\nRules matched: ${result.matchedRules.map(r => r.ruleId).join(', ')}\n\nRewrite your output following the correction above.` },
-      ],
-      structuredContent: { decision: 'CORRECT' as const, correction: correction, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
+      content: [{ type: 'text' as const, text: `${badge.emoji} ${badge.label} · ${correction}` }],
+      structuredContent: { decision: 'CORRECT' as const, badge, correction, matchedRules: decisionRules },
     }
   }
 
   // ALLOW
-  const instructions = result.matchedRules.map((r) => r.instruction).filter(Boolean)
-  const summary = instructions.length > 0 ? instructions.join('\n') : 'No specific instructions.'
-
+  const summary = result.primaryInstruction ?? `${result.totalMatched} rules matched`
   return {
-    content: [
-      {
-        type: 'text' as const,
-        text: `✅ ALLOW: Rule check passed.\\n\\nRules: ${result.matchedRules.map((r) => r.ruleId).join(', ')}\\n\\n${summary}`,
-      },
-    ],
+    content: [{ type: 'text' as const, text: `${badge.emoji} ${badge.label} · ${result.totalMatched} rules` }],
     structuredContent: {
       decision: 'ALLOW' as const,
-      instructions,
-      matchedRules: result.matchedRules.map((r) => ({ id: r.ruleId, name: r.ruleName, instruction: r.instruction })),
+      badge,
+      summary,
+      matchedRules: decisionRules,
       totalEvaluated: result.totalEvaluated,
       totalMatched: result.totalMatched,
     },
   }
+}
+
+const BADGE: Record<string, { emoji: string; label: string; color: string }> = {
+  ALLOW: { emoji: '✅', label: 'ERDL Guard', color: 'green' },
+  PASS: { emoji: '🔵', label: 'ERDL Pass', color: 'blue' },
+  DENY: { emoji: '🛑', label: 'ERDL Blocked', color: 'red' },
+  CORRECT: { emoji: '🔧', label: 'ERDL Correct', color: 'orange' },
+  REQUEST_HUMAN: { emoji: '👤', label: 'ERDL Approval', color: 'yellow' },
+  EMERGENCY_HALT: { emoji: '🚨', label: 'ERDL HALT', color: 'red' },
 }
