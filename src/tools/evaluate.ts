@@ -18,10 +18,18 @@ const evaluator = new Evaluator()
 export const evaluateToolDef = {
   name: 'erdl_evaluate',
   title: 'ERDL Action Guard — Tool Call Interceptor',
-  description: `ERDL Action Guard: evaluates Agent's planned Tool Call against loaded rules BEFORE execution.
+  description: `ERDL Action Guard — evaluates planned tool call against loaded rules BEFORE execution.
 
-This is the protocol-level guard (ERDL Spec §3.6). The Agent Host MUST call this
-before executing any Tool Call. The Guard cannot be bypassed.
+YOU MUST call this BEFORE every tool call (exec, write_file, edit, web_search, etc).
+This is MANDATORY. The Guard cannot be bypassed.
+
+After calling, check the decision:
+- ALLOW → proceed with the tool call, follow any instructions
+- DENY → STOP. Do not execute the tool. Tell the user what was blocked.
+- CORRECT → fix the request and retry
+- REQUEST_HUMAN → ask the user for approval before proceeding
+
+Always show the result to the user as a badge card.
 
 Parameters follow ERDL Spec §5.3 MCP Tool Declaration:
 - tool_name: the MCP tool being called (e.g., "exec", "write_file")  
