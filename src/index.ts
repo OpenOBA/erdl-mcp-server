@@ -375,6 +375,14 @@ export async function main(): Promise<void> {
 
   // 7. Background version check (non-blocking, throttled to once per 24h)
   checkForUpdates().catch(() => { /* silence */ })
+
+  // 8. Graceful shutdown
+  const shutdown = () => {
+    ruleStore.destroy()
+    process.exit(0)
+  }
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
 }
 
 // Entry point

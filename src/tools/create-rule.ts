@@ -77,6 +77,19 @@ export async function createRuleHandler(args: {
   decision: string
   instruction: string
 }) {
+  // Runtime validation
+  if (!args.naturalLanguage || typeof args.naturalLanguage !== 'string') {
+    return { content: [{ type: 'text' as const, text: 'Invalid input: naturalLanguage must be a non-empty string' }], isError: true }
+  }
+  const validCats = ['coding', 'engineering', 'writing', 'design', 'security', 'performance', 'testing', 'compliance', 'accessibility', 'custom']
+  if (!validCats.includes(args.category)) {
+    return { content: [{ type: 'text' as const, text: `Invalid category: ${args.category}. Must be one of: ${validCats.join(', ')}` }], isError: true }
+  }
+  const validDecisions = ['ALLOW', 'DENY', 'CORRECT', 'REQUEST_HUMAN']
+  if (!validDecisions.includes(args.decision)) {
+    return { content: [{ type: 'text' as const, text: `Invalid decision: ${args.decision}. Must be one of: ${validDecisions.join(', ')}` }], isError: true }
+  }
+
   const category = args.category as RuleCategory
 
   // Generate ID

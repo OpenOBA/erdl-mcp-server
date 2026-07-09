@@ -30,6 +30,11 @@ Categorize by type: coding, engineering, writing, design, security, performance,
 }
 
 export async function listRulesHandler(args: { category?: string }) {
+  // Runtime validation
+  if (args.category && typeof args.category !== 'string') {
+    return { content: [{ type: 'text' as const, text: 'Invalid input: category must be a string' }], isError: true }
+  }
+
   const allRules = ruleStore.getAll()
   const category = args.category ?? 'all'
 

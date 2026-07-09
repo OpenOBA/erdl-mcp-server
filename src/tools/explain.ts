@@ -47,6 +47,9 @@ export async function explainHandler(args: {
   tool_name: string
   tool_args?: Record<string, unknown>
 }) {
+  if (!args.tool_name || typeof args.tool_name !== 'string') {
+    return { content: [{ type: 'text' as const, text: 'Invalid input: tool_name must be a non-empty string' }], isError: true }
+  }
   const allRules = ruleStore.getAll()
   const enabled = allRules.filter((r) => r.enabled)
   const sorted = [...enabled].sort((a, b) => a.priority - b.priority)

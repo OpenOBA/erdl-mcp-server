@@ -68,6 +68,9 @@ export async function simulateHandler(args: {
   decision: string
   instruction: string
 }) {
+  if (!args.ruleName || typeof args.ruleName !== 'string') {
+    return { content: [{ type: 'text' as const, text: 'Invalid input: ruleName is required' }], isError: true }
+  }
   // Build a temporary rule
   const tempRule: RuleDefinition = {
     id: 'SIM-TEMP',

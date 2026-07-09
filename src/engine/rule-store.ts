@@ -463,7 +463,7 @@ export class RuleStore {
     try {
       const ast = compileWhen(expr)
       if (ast.conditions && Array.isArray(ast.conditions)) {
-        return (ast.conditions as Array<Record<string, unknown>>).map((c) => ({
+        return (ast.conditions as unknown as Array<Record<string, unknown>>).map((c) => ({
           kind: 'context_matches' as const,
           field: c.field as string ?? '',
           value: c.value,
@@ -519,12 +519,16 @@ export class RuleStore {
     }
   }
 
+  private watchTimer: ReturnType<typeof setTimeout> | null = null
+
   private startWatch(dir: string): void {
     try {
       this.watcher = fs.watch(dir, { recursive: true }, (_event, filename) => {
         if (filename && (filename.endsWith('.yaml') || filename.endsWith('.yml'))) {
-          // Debounce: reload after a short delay
-          setTimeout(() => {
+          // Proper debounce: clear previous timer before setting new one
+          if (this.watchTimer) clearTimeout(this.watchTimer)
+          this.watchTimer = setTimeout(() => {
+            this.watchTimer = null
             this.reload()
           }, 300)
         }
