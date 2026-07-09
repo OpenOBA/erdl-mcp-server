@@ -153,11 +153,12 @@ export async function evaluateHandler(args: {
   }
 
   if (result.decision === 'CORRECT') {
+    const correction = result.primaryCorrection ?? result.primaryInstruction
     return {
       content: [
-        { type: 'text' as const, text: `CORRECT: ${result.primaryInstruction}\nRules matched: ${result.matchedRules.map(r => r.ruleId).join(', ')}\n\nRewrite your output following the correction above.` },
+        { type: 'text' as const, text: `CORRECT: ${correction}\nRules matched: ${result.matchedRules.map(r => r.ruleId).join(', ')}\n\nRewrite your output following the correction above.` },
       ],
-      structuredContent: { decision: 'CORRECT' as const, correction: result.primaryInstruction, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
+      structuredContent: { decision: 'CORRECT' as const, correction: correction, matchedRules: result.matchedRules.map(r => ({ id: r.ruleId, name: r.ruleName })) },
     }
   }
 

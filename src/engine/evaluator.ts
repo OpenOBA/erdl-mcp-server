@@ -1,17 +1,45 @@
 /**
- * ERDL MCP Server — Rule Evaluator (ERDL Spec v1.1 compliant)
+ * ERDL MCP Server — Rule Evaluator (ERDL Spec v1.1 §11.4 compliant)
  *
- * Dual mode: Spec field/operator/value + legacy keyword matching.
+ * Execution Rings + override semantics + dual-mode condition evaluation.
+ *
+ * Algorithm (Spec §11.4):
+ *   1. Rules sorted by priority ascending (lower == higher priority)
+ *   2. Evaluate in Ring order: Ring 0 first, then Ring 1, 2, 3
+ *   3. Within each Ring, first-match-wins (short-circuit)
+ *   4. override=true can override a BLOCK/DENY from a HIGHER-priority Ring
+ *      (only BLOCK→ALLOW direction; never to a less-safe state)
+ *   5. override within same Ring: override rule runs first regardless of priority
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-07 · updated 2026-07-09 (override + rings)
  * @license MIT
  */
 
-import type { RuleDefinition, RuleCondition, EvaluationResult, RuleMatch } from './rule-definition.js'
+import type { RuleDefinition, RuleCondition, EvaluationResult, RuleMatch, Decision, RingLevel } from './rule-definition.js'
 import { SafeExpr } from './safe-expr.js'
 
 const safeExpr = new SafeExpr()
+
+/** Safety severity: lower number = more restrictive */
+const DECISION_SEVERITY: Record<string, number> = {
+  EMERGENCY_HALT: 0,
+  DENY: 1,
+  REQUEST_HUMAN: 2,
+  CORRECT: 3,
+  ALLOW: 4,
+  PASS: 5,
+}
+
+/**
+ * override is only permitted in the safe direction:
+ * BLOCK/DENY/HALT → ALLOW is safe (override relaxes).
+ * ALLOW → DENY is NOT override; it's already handled by Ring ordering.
+ */
+function isOverrideSafe(from: Decision, to: Decision): boolean {
+  // override only moves from more restrictive → less restrictive
+  return DECISION_SEVERITY[to] > DECISION_SEVERITY[from]
+}
 
 export class Evaluator {
   evaluate(
@@ -19,91 +47,111 @@ export class Evaluator {
     context: Record<string, unknown>,
   ): EvaluationResult {
     const enabled = rules.filter((r) => r.enabled)
-    const sorted = [...enabled].sort((a, b) => a.priority - b.priority)
+    if (enabled.length === 0) {
+      return { decision: 'PASS', matchedRules: [], totalEvaluated: 0, totalMatched: 0 }
+    }
 
-    const matchedRules: RuleMatch[] = []
+    // Group by Ring, sort within each Ring by priority (override rules jump to front)
+    const byRing = new Map<number, RuleDefinition[]>()
+    for (const rule of enabled) {
+      const ring = rule.action.ring ?? 3
+      if (!byRing.has(ring)) byRing.set(ring, [])
+      byRing.get(ring)!.push(rule)
+    }
 
-    for (const rule of sorted) {
-      const matched = rule.conditions.length === 0 || rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
-      if (matched) {
-        matchedRules.push({
-          ruleId: rule.id,
-          ruleName: rule.name,
-          decision: rule.action.decision,
-          instruction: rule.action.instruction,
-          reason: rule.action.reason,
-          ring: rule.action.ring,
-          correction: rule.action.correction,
-          priority: rule.priority,
-        })
+    // Sort Ring keys ascending (Ring 0 evaluates first)
+    const ringKeys = [...byRing.keys()].sort((a, b) => a - b)
+
+    const allMatched: RuleMatch[] = []
+    let finalDecision: Decision = 'PASS'
+    let finalInstruction: string | undefined
+    let finalReason: string | undefined
+    let finalCorrection: string | undefined
+
+    for (const ring of ringKeys) {
+      const ringRules = byRing.get(ring)!
+
+      // Separate override and normal rules
+      const overrideRules = ringRules.filter((r) => r.override)
+      const normalRules = ringRules.filter((r) => !r.override)
+
+      // Phase 1: Evaluate normal rules with first-match-wins (per §11.4 step 2-3)
+      for (const rule of normalRules.sort((a, b) => a.priority - b.priority)) {
+        const matched = rule.conditions.length === 0 ||
+          rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
+        if (!matched) continue
+
+        const match = this.makeMatch(rule, ring as RingLevel)
+        allMatched.push(match)
+        finalDecision = match.decision
+        finalReason = match.reason
+        finalInstruction = match.instruction
+        finalCorrection = match.correction
+
+        // Ring 0 BLOCK/HALT: short-circuit all further evaluation
+        if (ring === 0 && (match.decision === 'EMERGENCY_HALT' || match.decision === 'DENY')) {
+          return {
+            decision: finalDecision,
+            matchedRules: allMatched,
+            primaryReason: finalReason ?? `${finalDecision} triggered by Ring 0 rule`,
+            totalEvaluated: enabled.length,
+            totalMatched: allMatched.length,
+          }
+        }
+
+        // First match wins in this ring (for normal rules); move to next ring
+        break
+      }
+
+      // Phase 2: Evaluate override rules AFTER normal rules have produced a decision.
+      // Override rules can only relax (BLOCK/DENY → ALLOW), never tighten.
+      // Override rules without a prior decision are skipped (they patch, not decide).
+      if (finalDecision !== 'PASS') {
+        for (const rule of overrideRules.sort((a, b) => a.priority - b.priority)) {
+          const matched = rule.conditions.length === 0 ||
+            rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
+          if (!matched) continue
+
+          const match = this.makeMatch(rule, ring as RingLevel)
+
+          if (isOverrideSafe(finalDecision, match.decision)) {
+            allMatched.push(match)
+            finalDecision = match.decision
+            finalReason = match.reason
+            finalInstruction = match.instruction
+            finalCorrection = match.correction
+          }
+          // unsafe override → silently ignored, rule is recorded as skipped
+        }
       }
     }
 
-    if (matchedRules.length === 0) {
-      return {
-        decision: 'PASS',
-        matchedRules: [],
-        totalEvaluated: sorted.length,
-        totalMatched: 0,
-      }
-    }
-
-    const decisionPriority: Record<string, number> = {
-      EMERGENCY_HALT: 0, DENY: 1, REQUEST_HUMAN: 2, CORRECT: 3, ALLOW: 4, PASS: 5,
-    }
-    const worst = matchedRules.reduce((a, b) =>
-      decisionPriority[a.decision] < decisionPriority[b.decision] ? a : b,
-    )
-
-    if (worst.decision === 'EMERGENCY_HALT') {
-      return {
-        decision: 'EMERGENCY_HALT',
-        matchedRules,
-        primaryReason: worst.reason ?? 'Emergency halt triggered',
-        totalEvaluated: sorted.length,
-        totalMatched: matchedRules.length,
-      }
-    }
-
-    const denied = matchedRules.find((r) => r.decision === 'DENY')
-    if (denied) {
-      return {
-        decision: 'DENY',
-        matchedRules,
-        primaryReason: denied.reason ?? `Blocked by rule: ${denied.ruleName}`,
-        totalEvaluated: sorted.length,
-        totalMatched: matchedRules.length,
-      }
-    }
-
-    const humanReq = matchedRules.find((r) => r.decision === 'REQUEST_HUMAN')
-    if (humanReq) {
-      return {
-        decision: 'REQUEST_HUMAN',
-        matchedRules,
-        primaryReason: humanReq.reason ?? 'Human approval required',
-        totalEvaluated: sorted.length,
-        totalMatched: matchedRules.length,
-      }
-    }
-
-    const correct = matchedRules.find((r) => r.decision === 'CORRECT')
-    if (correct) {
-      return {
-        decision: 'CORRECT',
-        matchedRules,
-        primaryInstruction: correct.correction ?? correct.instruction ?? 'Correction applied',
-        totalEvaluated: sorted.length,
-        totalMatched: matchedRules.length,
-      }
+    if (allMatched.length === 0) {
+      return { decision: 'PASS', matchedRules: [], totalEvaluated: enabled.length, totalMatched: 0 }
     }
 
     return {
-      decision: 'ALLOW',
-      matchedRules,
-      primaryInstruction: matchedRules[0].instruction,
-      totalEvaluated: sorted.length,
-      totalMatched: matchedRules.length,
+      decision: finalDecision,
+      matchedRules: allMatched,
+      primaryReason: finalReason,
+      primaryInstruction: finalInstruction,
+      primaryCorrection: finalCorrection,
+      totalEvaluated: enabled.length,
+      totalMatched: allMatched.length,
+    }
+  }
+
+  /** Build a RuleMatch from a matched rule */
+  private makeMatch(rule: RuleDefinition, ring: RingLevel): RuleMatch {
+    return {
+      ruleId: rule.id,
+      ruleName: rule.name,
+      decision: rule.action.decision,
+      instruction: rule.action.instruction,
+      reason: rule.action.reason,
+      ring: rule.action.ring ?? ring,
+      correction: rule.action.correction,
+      priority: rule.priority,
     }
   }
 

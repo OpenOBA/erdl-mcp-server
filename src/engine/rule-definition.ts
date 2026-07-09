@@ -139,12 +139,14 @@ export interface EvaluationResult {
   /** Overall decision: ALLOW if any matched, DENY if blocked, PASS if no rules fired */
   decision: Decision
 
-  /** All matched rules, sorted by priority */
+  /** All matched rules, in evaluation order */
   matchedRules: RuleMatch[]
 
   /** The highest-priority instruction (for ALLOW) or reason (for DENY) */
   primaryInstruction?: string
   primaryReason?: string
+  /** Correction text (CORRECT decision) */
+  primaryCorrection?: string
 
   /** Total rules evaluated */
   totalEvaluated: number

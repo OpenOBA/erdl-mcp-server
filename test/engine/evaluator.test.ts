@@ -117,7 +117,7 @@ describe('Evaluator (Tool Call Guard mode)', () => {
       })]
       const result = evaluator.evaluate(rules, guardCtx('write_file', { path: '/etc/config.txt' }))
       expect(result.decision).toBe('CORRECT')
-      expect(result.primaryInstruction).toBe('use workspace path')
+      expect(result.primaryCorrection).toBe('use workspace path')
     })
   })
 
@@ -228,6 +228,126 @@ describe('Evaluator (Tool Call Guard mode)', () => {
       })]
       const result = evaluator.evaluate(rules, guardCtx('any_tool'))
       expect(result.decision).toBe('ALLOW')
+    })
+  })
+
+  // ============================================
+  // override semantics (Spec §11.4)
+  // ============================================
+
+  describe('override semantics', () => {
+    it('override rule can relax a DENY to ALLOW', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'BLOCK_ALL_EXEC',
+          priority: 10,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'DENY', reason: 'exec blocked by default' },
+        }),
+        makeRule({
+          id: 'ALLOW_SAFE_EXEC',
+          priority: 50,
+          override: true,
+          conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'ls' }],
+          action: { decision: 'ALLOW', instruction: 'safe exec allowed' },
+        }),
+      ]
+      // exec with 'ls' matches BLOCK_ALL_EXEC first (DENY), then ALLOW_SAFE_EXEC overrides
+      const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'ls -la' }))
+      expect(result.decision).toBe('ALLOW')
+      expect(result.primaryInstruction).toBe('safe exec allowed')
+    })
+
+    it('override is NOT allowed in unsafe direction (ALLOW → DENY)', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'ALLOW_ALL',
+          priority: 10,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'ALLOW', instruction: 'allowed' },
+        }),
+        makeRule({
+          id: 'BLOCK_OVERRIDE',
+          priority: 50,
+          override: true,
+          conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'rm' }],
+          action: { decision: 'DENY', reason: 'trying to block via override' },
+        }),
+      ]
+      // ALLOW_ALL matches first. BLOCK_OVERRIDE tries to override to DENY → REJECTED
+      const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'rm -rf /' }))
+      expect(result.decision).toBe('ALLOW')
+      expect(result.primaryInstruction).toBe('allowed')
+    })
+
+    it('override rule without match does not change outcome', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'BLOCK_EXEC',
+          priority: 10,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'DENY', reason: 'exec blocked' },
+        }),
+        makeRule({
+          id: 'OVERRIDE_FOR_WEB',
+          priority: 50,
+          override: true,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'web_search' }],
+          action: { decision: 'ALLOW', instruction: 'web override' },
+        }),
+      ]
+      // override rule targets web_search, but we're calling exec → override doesn't match
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
+      expect(result.decision).toBe('DENY')
+    })
+  })
+
+  // ============================================
+  // Execution Rings (Spec §3.5)
+  // ============================================
+
+  describe('Execution Rings', () => {
+    it('Ring 0 rules evaluate before Ring 3', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'ALLOW_RING3',
+          priority: 1, // higher priority than ring0 rule
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'ALLOW', instruction: 'ring3 ok', ring: 3 },
+        }),
+        makeRule({
+          id: 'BLOCK_RING0',
+          priority: 100, // lower priority
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'DENY', reason: 'ring0 blocks all exec', ring: 0 },
+        }),
+      ]
+      // Ring 0 evaluates first, regardless of priority
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
+      expect(result.decision).toBe('DENY')
+      expect(result.matchedRules[0].ruleId).toBe('BLOCK_RING0')
+    })
+
+    it('EMERGENCY_HALT in Ring 0 short-circuits everything', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'HALT_RING0',
+          priority: 1,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'EMERGENCY_HALT', reason: 'halt all', ring: 0 },
+        }),
+        makeRule({
+          id: 'ALLOW_RING3',
+          priority: 1,
+          override: true,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'ALLOW', instruction: 'trying to override', ring: 3 },
+        }),
+      ]
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
+      expect(result.decision).toBe('EMERGENCY_HALT')
+      // Only the halt rule should be matched (ring 3 never evaluated)
+      expect(result.matchedRules).toHaveLength(1)
     })
   })
 })
