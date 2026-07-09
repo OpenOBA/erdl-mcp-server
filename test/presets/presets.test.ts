@@ -143,11 +143,14 @@ describe('Preset Rules', () => {
       }
     })
 
-    it('engineering override rules have override=true', () => {
-      const overrideRules = allEngineeringRules.filter((r) => r.override)
-      expect(overrideRules.length).toBeGreaterThan(0)
-      for (const rule of overrideRules) {
-        expect(rule.override).toBe(true)
+    it('engineering DENY rules have a reason and are not override', () => {
+      const denyRules = allEngineeringRules.filter((r) => r.action.decision === 'DENY')
+      expect(denyRules.length).toBeGreaterThan(0)
+      for (const rule of denyRules) {
+        expect(rule.action.reason).toBeTruthy()
+        // DENY rules should NOT use override to enforce themselves.
+        // They use priority ordering in Phase 1 evaluation instead.
+        expect(rule.override).toBeUndefined()
       }
     })
 
@@ -162,7 +165,7 @@ describe('Preset Rules', () => {
       expect(rule).toBeDefined()
       expect(rule!.action.decision).toBe('DENY')
       expect(rule!.conditions.length).toBeGreaterThan(0) // has actual matching conditions
-      expect(rule!.override).toBe(true)
+      // DENY rules don't need override — priority handles ordering
     })
 
     it('EN-008 no_shortcut is ALLOW with instruction (advisory)', () => {

@@ -76,8 +76,8 @@ export class Evaluator {
       const normalRules = ringRules.filter((r) => !r.override)
 
       // Phase 1: Evaluate normal rules. ALLOW rules accumulate (inject instructions).
-      // DENY/HALT/REQUEST_HUMAN stop evaluation — safety wins over advisories.
-      // This allows advisory ALLOW rules to coexist with safety DENY rules.
+      // DENY/HALT stop immediately — safety wins over advisories.
+      // REQUEST_HUMAN/CORRECT also keep evaluating — a later DENY should still win.
       for (const rule of normalRules.sort((a, b) => a.priority - b.priority)) {
         const matched = rule.conditions.length === 0 ||
           rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
@@ -86,20 +86,26 @@ export class Evaluator {
         const match = this.makeMatch(rule, ring as RingLevel)
         allMatched.push(match)
 
-        // ALLOW rules: accumulate instructions but don't stop evaluation
-        if (match.decision === 'ALLOW') {
+        // ALLOW / REQUEST_HUMAN / CORRECT: accumulate but keep evaluating
+        if (match.decision === 'ALLOW' || match.decision === 'REQUEST_HUMAN' || match.decision === 'CORRECT') {
           if (finalDecision === 'PASS') {
-            finalDecision = 'ALLOW'
+            finalDecision = match.decision
           }
-          if (match.instruction) {
+          if (match.instruction && match.decision === 'ALLOW') {
             finalInstruction = finalInstruction
               ? `${finalInstruction}; ${match.instruction}`
               : match.instruction
           }
+          if (match.reason && match.decision === 'REQUEST_HUMAN') {
+            finalReason = match.reason
+          }
+          if (match.correction && match.decision === 'CORRECT') {
+            finalCorrection = match.correction
+          }
           continue // keep evaluating for potential DENY rules
         }
 
-        // Safety decisions: win immediately
+        // DENY/HALT: win immediately
         finalDecision = match.decision
         finalReason = match.reason
         finalInstruction = match.instruction
@@ -116,7 +122,7 @@ export class Evaluator {
           }
         }
 
-        break // DENY/REQUEST_HUMAN/CORRECT stops evaluation in this ring
+        break // DENY/HALT stops evaluation in this ring. ALLOW/REQUEST_HUMAN/CORRECT already continued above.
       }
 
       // Phase 2: Evaluate override rules AFTER normal rules have produced a decision.

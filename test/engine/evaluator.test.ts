@@ -331,6 +331,26 @@ describe('Evaluator (Tool Call Guard mode)', () => {
       expect(result.decision).toBe('DENY')
       expect(result.primaryReason).toBe('exec blocked')
     })
+
+    it('DENY wins even when higher-priority REQUEST_HUMAN matches first', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'ASK_HUMAN',
+          priority: 2,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'REQUEST_HUMAN', reason: 'please confirm' },
+        }),
+        makeRule({
+          id: 'BLOCKER',
+          priority: 5,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'DENY', reason: 'exec blocked' },
+        }),
+      ]
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
+      expect(result.decision).toBe('DENY')
+      expect(result.primaryReason).toBe('exec blocked')
+    })
   })
 
   describe('Execution Rings', () => {
