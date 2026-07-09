@@ -182,14 +182,15 @@ describe('Evaluator (Tool Call Guard mode)', () => {
       expect(result.decision).toBe('ALLOW')
     })
 
-    it('higher priority instruction is used for ALLOW', () => {
+    it('ALLOW instructions accumulate from all matching advisory rules', () => {
       const rules: RuleDefinition[] = [
         makeRule({ id: 'FIRST', priority: 1, conditions: [], action: { decision: 'ALLOW', instruction: 'first' } }),
         makeRule({ id: 'SECOND', priority: 2, conditions: [], action: { decision: 'ALLOW', instruction: 'second' } }),
       ]
       const result = evaluator.evaluate(rules, guardCtx('read_file'))
       expect(result.decision).toBe('ALLOW')
-      expect(result.primaryInstruction).toBe('first')
+      // ALLOW instructions accumulate (advisory rules don't short-circuit)
+      expect(result.primaryInstruction).toBe('first; second')
     })
   })
 
@@ -305,6 +306,32 @@ describe('Evaluator (Tool Call Guard mode)', () => {
   // ============================================
   // Execution Rings (Spec §3.5)
   // ============================================
+
+  // ============================================
+  // Advisory ALLOW does not block DENY
+  // ============================================
+
+  describe('advisory ALLOW vs DENY', () => {
+    it('DENY wins even when higher-priority ALLOW matches first', () => {
+      const rules: RuleDefinition[] = [
+        makeRule({
+          id: 'ADVISORY',
+          priority: 1,
+          conditions: [],
+          action: { decision: 'ALLOW', instruction: 'be careful' },
+        }),
+        makeRule({
+          id: 'BLOCKER',
+          priority: 5,
+          conditions: [{ kind: 'context_matches', field: 'tool.name', operator: 'eq', value: 'exec' }],
+          action: { decision: 'DENY', reason: 'exec blocked' },
+        }),
+      ]
+      const result = evaluator.evaluate(rules, guardCtx('exec'))
+      expect(result.decision).toBe('DENY')
+      expect(result.primaryReason).toBe('exec blocked')
+    })
+  })
 
   describe('Execution Rings', () => {
     it('Ring 0 rules evaluate before Ring 3', () => {

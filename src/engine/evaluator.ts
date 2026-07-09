@@ -75,7 +75,9 @@ export class Evaluator {
       const overrideRules = ringRules.filter((r) => r.override)
       const normalRules = ringRules.filter((r) => !r.override)
 
-      // Phase 1: Evaluate normal rules with first-match-wins (per §11.4 step 2-3)
+      // Phase 1: Evaluate normal rules. ALLOW rules accumulate (inject instructions).
+      // DENY/HALT/REQUEST_HUMAN stop evaluation — safety wins over advisories.
+      // This allows advisory ALLOW rules to coexist with safety DENY rules.
       for (const rule of normalRules.sort((a, b) => a.priority - b.priority)) {
         const matched = rule.conditions.length === 0 ||
           rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
@@ -83,6 +85,21 @@ export class Evaluator {
 
         const match = this.makeMatch(rule, ring as RingLevel)
         allMatched.push(match)
+
+        // ALLOW rules: accumulate instructions but don't stop evaluation
+        if (match.decision === 'ALLOW') {
+          if (finalDecision === 'PASS') {
+            finalDecision = 'ALLOW'
+          }
+          if (match.instruction) {
+            finalInstruction = finalInstruction
+              ? `${finalInstruction}; ${match.instruction}`
+              : match.instruction
+          }
+          continue // keep evaluating for potential DENY rules
+        }
+
+        // Safety decisions: win immediately
         finalDecision = match.decision
         finalReason = match.reason
         finalInstruction = match.instruction
@@ -99,8 +116,7 @@ export class Evaluator {
           }
         }
 
-        // First match wins in this ring (for normal rules); move to next ring
-        break
+        break // DENY/REQUEST_HUMAN/CORRECT stops evaluation in this ring
       }
 
       // Phase 2: Evaluate override rules AFTER normal rules have produced a decision.
