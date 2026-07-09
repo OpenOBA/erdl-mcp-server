@@ -234,7 +234,6 @@ export async function main(): Promise<void> {
     {
       capabilities: {
         tools: { listChanged: true },
-        resources: {},
       },
     },
   )
