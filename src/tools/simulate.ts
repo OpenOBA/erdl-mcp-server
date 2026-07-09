@@ -32,7 +32,7 @@ Show the simulation results and ask if the user wants to proceed.`,
       },
       category: {
         type: 'string',
-        enum: ['coding', 'writing', 'design', 'custom'],
+        enum: ['coding', 'engineering', 'writing', 'design', 'security', 'performance', 'testing', 'compliance', 'accessibility', 'custom'],
         description: 'Rule category',
       },
       triggers: {

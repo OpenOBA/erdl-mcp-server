@@ -151,6 +151,12 @@ describe('Preset Rules', () => {
       }
     })
 
+    it('all engineering rules have scopeLevel=1 (personal)', () => {
+      for (const rule of allEngineeringRules) {
+        expect(rule.scopeLevel).toBe(1)
+      }
+    })
+
     it('EN-006 no_powershell_setcontent is DENY with match condition', () => {
       const rule = allEngineeringRules.find((r) => r.id === 'EN-006')
       expect(rule).toBeDefined()

@@ -42,7 +42,7 @@ The rule is saved to ~/.openoba/rules/ and takes effect immediately (no restart 
       },
       category: {
         type: 'string',
-        enum: ['coding', 'writing', 'design', 'custom'],
+        enum: ['coding', 'engineering', 'writing', 'design', 'security', 'performance', 'testing', 'compliance', 'accessibility', 'custom'],
         description: 'Rule category',
       },
       triggers: {

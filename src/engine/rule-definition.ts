@@ -1,11 +1,11 @@
 /**
  * ERDL MCP Server — Rule Definition Types
  *
- * Core type definitions for ERDL rules. Designed for personal use:
- * coding conventions, writing style, design constraints — not enterprise policies.
+ * Core type definitions for ERDL rules.
+ * Supports personal rules, team standards, enterprise policies, and compliance mandates.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-07 · updated 2026-07-09 (compliance scope + extended categories)
  * @license MIT
  */
 
@@ -80,7 +80,31 @@ export interface RuleAction {
 // Rule Definition
 // ============================================
 
-export type RuleCategory = 'coding' | 'writing' | 'design' | 'custom'
+/**
+ * Rule category for organization.
+ *
+ * coding — code standards and patterns
+ * engineering — engineering discipline and workflow
+ * security — security rules and vulnerability prevention
+ * writing — content and documentation standards
+ * design — UI/UX and visual design constraints
+ * performance — runtime efficiency and optimization
+ * testing — test coverage and quality gates
+ * compliance — regulatory and legal mandates
+ * accessibility — a11y and inclusive design
+ * custom — user-defined / uncategorized
+ */
+export type RuleCategory =
+  | 'coding'
+  | 'engineering'
+  | 'security'
+  | 'writing'
+  | 'design'
+  | 'performance'
+  | 'testing'
+  | 'compliance'
+  | 'accessibility'
+  | 'custom'
 
 export interface RuleDefinition {
   /** Unique rule ID (e.g., "TS-001") */
@@ -115,6 +139,9 @@ export interface RuleDefinition {
 
   /** Rule version (for tracking changes) */
   version?: number
+
+  /** Compliance scope level (1-5). 1=personal, 2=organizational, 3=national, 4=regional, 5=global */
+  scopeLevel?: 1 | 2 | 3 | 4 | 5
 
   /** Hit count (runtime counter) */
   hitCount?: number

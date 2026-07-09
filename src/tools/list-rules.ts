@@ -4,7 +4,7 @@
  * Lists all currently loaded rules with their status.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07
+ * @since 2026-07-07 · updated 2026-07-09 (extended categories + scope)
  * @license MIT
  */
 
@@ -15,14 +15,14 @@ export const listRulesToolDef = {
   title: 'List ERDL Rules',
   description: `List all currently loaded ERDL rules.
 Use this when the user asks "what rules do you have?" or wants to see what constraints are active.
-Categorize by type: coding, writing, design, custom.`,
+Categorize by type: coding, engineering, writing, design, security, performance, testing, compliance, accessibility, custom.`,
 
   inputSchema: {
     type: 'object',
     properties: {
       category: {
         type: 'string',
-        enum: ['coding', 'writing', 'design', 'custom', 'all'],
+        enum: ['coding', 'engineering', 'writing', 'design', 'security', 'performance', 'testing', 'compliance', 'accessibility', 'custom', 'all'],
         description: 'Filter by category. Use "all" or omit to show everything.',
       },
     },
@@ -60,7 +60,7 @@ export async function listRulesHandler(args: { category?: string }) {
 
   let text = '## Your ERDL Rules\n\n'
   for (const [cat, rules] of Object.entries(groups)) {
-    const emoji = cat === 'coding' ? '🧑‍💻' : cat === 'writing' ? '✍️' : cat === 'design' ? '🎨' : '📦'
+    const emoji = CAT_EMOJI[cat] ?? '📦'
     text += `### ${emoji} ${cat} (${rules.length})\n`
     for (const r of rules) {
       const status = r.enabled ? '✅' : '❌'
@@ -84,8 +84,22 @@ export async function listRulesHandler(args: { category?: string }) {
         category: r.category,
         enabled: r.enabled,
         priority: r.priority,
+        scopeLevel: r.scopeLevel ?? null,
         hitCount: r.hitCount ?? 0,
       })),
     },
   }
+}
+
+const CAT_EMOJI: Record<string, string> = {
+  coding: '🧑‍💻',
+  engineering: '🔧',
+  security: '🔒',
+  writing: '✍️',
+  design: '🎨',
+  performance: '⚡',
+  testing: '🧪',
+  compliance: '📋',
+  accessibility: '♿',
+  custom: '📦',
 }
