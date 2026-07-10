@@ -165,7 +165,7 @@ rules:
     enabled: true
 ```
 
-[📚 Full tutorial: Create Your First ERDL Rule →](./docs/tutorial-create-rules.md)
+[📚 Full tutorial: Create Your First ERDL Rule →](./docs/tutorial-create-rules.md) ([English](./docs/tutorial-create-rules.en.md))
 
 ---
 
