@@ -129,6 +129,12 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 }
 ```
 
+Or let ERDL generate the config for your client:
+
+```bash
+npx @openoba-ai/erdl-mcp@latest --setup
+```
+
 ### Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or the equivalent path on your OS.

@@ -71,6 +71,8 @@ Usage:
   npx ${PKG_NAME} --help        Show this help
   npx ${PKG_NAME} --upgrade     Upgrade to the latest version
   npx ${PKG_NAME} --uninstall   Remove all ERDL files and configurations
+  npx ${PKG_NAME} --setup       Show MCP client configuration
+  npx ${PKG_NAME} --setup -g    Show config for global install
 
 Rules directory: ~/.openoba/rules/
 Docs: https://openoba.com/erdl
@@ -171,6 +173,59 @@ function upgrade(): void {
   process.exit(0)
 }
 
+/** Handle --setup: generate MCP configuration for supported clients */
+function setup(): void {
+  const isGlobal = process.argv.includes('--global') || process.argv.includes('-g')
+  const cmd = isGlobal ? 'erdl-mcp' : `npx -y ${PKG_NAME}@latest`
+  
+  console.error('[erdl-mcp] 🔧 ERDL MCP Setup')
+  console.error('')
+  console.error('Copy the section for your MCP client:')
+  console.error('')
+
+  // Claude Desktop
+  console.error('━━━ Claude Desktop ━━━')
+  console.error(`Add to ~/Library/Application Support/Claude/claude_desktop_config.json:`)
+  console.error('')
+  console.error(JSON.stringify({
+    mcpServers: {
+      erdl: { command: cmd.split(' ')[0], args: cmd.split(' ').slice(1) }
+    }
+  }, null, 2))
+  console.error('')
+
+  // Cursor
+  console.error('━━━ Cursor ━━━')
+  console.error('Add to .cursor/mcp.json in your project root:')
+  console.error('')
+  console.error(JSON.stringify({
+    mcpServers: {
+      erdl: { command: cmd.split(' ')[0], args: cmd.split(' ').slice(1) }
+    }
+  }, null, 2))
+  console.error('')
+
+  // OpenClaw
+  console.error('━━━ OpenClaw ━━━')
+  console.error(`  openclaw mcp set erdl '{"command":"${cmd.split(' ')[0]}","args":${JSON.stringify(cmd.split(' ').slice(1))}}'`)
+  console.error('')
+
+  // VS Code / GitHub Copilot
+  console.error('━━━ VS Code / Copilot ━━━')
+  console.error('Add to .vscode/mcp.json:')
+  console.error('')
+  console.error(JSON.stringify({
+    inputs: [],
+    servers: {
+      erdl: { type: 'stdio', command: cmd.split(' ')[0], args: cmd.split(' ').slice(1) }
+    }
+  }, null, 2))
+  console.error('')
+
+  console.error('After adding config, restart your MCP client.')
+  process.exit(0)
+}
+
 // Dispatch CLI commands (exit early, don't start MCP server)
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   showHelp()
@@ -180,6 +235,9 @@ if (process.argv.includes('--version') || process.argv.includes('-v')) {
 }
 if (process.argv.includes('--uninstall')) {
   uninstall()
+}
+if (process.argv.includes('--setup')) {
+  setup()
 }
 if (process.argv.includes('--upgrade')) {
   upgrade()
