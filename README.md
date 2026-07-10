@@ -186,6 +186,16 @@ npx @openoba-ai/erdl-mcp@latest --help     # Full usage
 > ```
 > Then re-run: `npx @openoba-ai/erdl-mcp@latest`
 
+### Run from Source
+
+```bash
+git clone https://github.com/OpenOBA/erdl-mcp-server.git
+cd erdl-mcp-server
+npm install
+npm run build
+node bin/erdl-mcp.js --version
+```
+
 ---
 
 ## License
