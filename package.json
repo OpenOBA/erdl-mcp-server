@@ -43,6 +43,15 @@
     "prepublishOnly": "npm run quality",
     "prepack": "npm run build"
   },
+  "files": [
+    "dist/",
+    "rules/",
+    "bin/",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "js-yaml": "^4.1.0"
