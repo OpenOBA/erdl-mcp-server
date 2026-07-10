@@ -56,6 +56,18 @@ npx -y @openoba-ai/erdl-mcp --lang zh
 
 [Get a Pro License →](https://openoba.com/erdl-mcp/pro)
 
+### One-command Install
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/OpenOBA/erdl-mcp-server/master/scripts/install.sh | bash
+```
+
+```powershell
+# Windows (PowerShell)
+iwr https://raw.githubusercontent.com/OpenOBA/erdl-mcp-server/master/scripts/install.ps1 | iex
+```
+
 ---
 
 ## Why ERDL vs SKILL.md / Prompt Rules?
