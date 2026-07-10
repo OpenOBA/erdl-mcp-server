@@ -1,6 +1,6 @@
 {
   "name": "@openoba-ai/erdl-mcp",
-  "version": "1.0.0-beta.9",
+  "version": "1.0.0",
   "type": "module",
   "description": "ERDL rules as an MCP Server — deterministic rules that give your Agent muscle memory",
   "keywords": [
@@ -16,7 +16,7 @@
   "homepage": "https://openoba.com/erdl-mcp",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openoba/erdl-mcp-server.git"
+    "url": "git+https://github.com/OpenOBA/erdl-mcp-server.git"
   },
   "bin": {
     "erdl-mcp": "bin/erdl-mcp.js"

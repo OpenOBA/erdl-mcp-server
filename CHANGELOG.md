@@ -2,6 +2,25 @@
 
 All notable changes to ERDL MCP Server will be documented in this file.
 
+## [1.0.0] — 2026-07-10
+
+### Added
+- Public GitHub release: OpenOBA/erdl-mcp-server
+- Free vs Pro tier comparison in README
+- `--pro-key` CLI flag for Pro license activation
+- `.editorconfig` for consistent encoding (UTF-8, LF)
+
+### Changed
+- README rewritten: simplified, Free/Pro split, removed MCP platform status table and roadmap
+- Version bumped from beta.9 → 1.0.0 (first public release)
+- package.json repository URL corrected to `OpenOBA/erdl-mcp-server`
+- Removed reference to `openoba-starter` in test file header
+
+### Removed
+- MCP platform "Coming soon" table (will re-add when listings are live)
+- Roadmap section (will publish separately)
+- Dead tutorial link
+
 ## [1.0.0-beta.1] — 2026-07-09
 
 ### Added

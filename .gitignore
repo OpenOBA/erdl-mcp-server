@@ -6,3 +6,9 @@ dist/
 coverage/
 .vitest/
 *.tgz
+.workbuddy/
+.backups/
+*.swp
+.DS_Store
+Thumbs.db
+docs/phase2-plan.md

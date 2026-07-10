@@ -1,7 +1,7 @@
 /**
  * ERDL MCP Server — Expression Engine Tests
  *
- * Migrated from openoba-starter SafeExpr test suite.
+ * Migrated from the SafeExpr test suite.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
  * @since 2026-07-07

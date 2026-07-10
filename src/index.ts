@@ -11,7 +11,7 @@
  *   npx @openoba-ai/erdl-mcp --uninstall   Remove all ERDL files
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-07 · updated 2026-07-09 (upgrade + version check)
+ * @since 2026-07-07 · updated 2026-07-10 (v1.0.0 public release)
  * @license MIT
  */
 
@@ -64,6 +64,8 @@ function showHelp(): void {
 
 Usage:
   npx ${PKG_NAME}               Start the MCP server (stdio transport)
+  npx ${PKG_NAME} --lang zh     Chinese mode
+  npx ${PKG_NAME} --pro-key sk-xxx  Activate Pro license
   npx ${PKG_NAME} --version     Show version
   npx ${PKG_NAME} --help        Show this help
   npx ${PKG_NAME} --upgrade     Upgrade to the latest version

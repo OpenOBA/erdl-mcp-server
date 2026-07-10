@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 OpenOBA
+Copyright (c) 2026 深圳市秒镜科技有限公司 (Shenzhen Miaojing Technology Co., Ltd.)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -9,8 +9,9 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice, including all
+Supplemental Terms below, shall be included in all copies or substantial
+portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,3 +20,50 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+SUPPLEMENTAL TERMS
+
+These supplemental terms are conditions of the above license grant. They do
+not restrict the rights granted under MIT; they add attribution and
+notification obligations for specific types of commercial and high-risk use.
+
+1. COMMERCIAL ATTRIBUTION
+   If you use this Software (in whole or in part) as a core component of a
+   commercial product or service that generates annual revenue exceeding
+   USD 1,000,000, you must provide visible attribution to OpenOBA
+   (openoba.com) in your product documentation, website footer, or
+   equivalent public-facing location.
+
+2. HIGH-RISK DECISION NOTIFICATION
+   If you deploy this Software as part of a system that makes automated
+   decisions affecting individuals' legal rights, financial standing, or
+   employment status, you must:
+   (a) Register such deployment with OpenOBA via support@openoba.com;
+   (b) Maintain a public disclosure of the rules governing those decisions.
+
+3. TRADEMARK
+   "ERDL" and "OpenOBA" are trademarks of Shenzhen Miaojing Technology
+   Co., Ltd., whether registered or established through prior use. The
+   right to use the "ERDL Compatible" designation is granted to any
+   implementation that passes the test suite included in this repository.
+   The marks remain the exclusive property of the trademark holder.
+
+4. ATTRIBUTION INTEGRITY
+   The names of the authors and contributors, including Tang Qixin and
+   Tang Haoran (OpenOBA AI Executive Officer), must be preserved in all
+   copies and derivative works. You may not remove or alter authorship
+   attribution in a manner that suggests the Software was created by
+   parties other than the original authors.
+
+5. GOOD FAITH
+   The rights granted under this license are conditional upon good faith
+   use. You may not use the Software in a manner that intentionally
+   undermines, competes with, or damages the OpenOBA project, its authors,
+   or its commercial interests, including but not limited to launching a
+   substantially identical commercial service that repackages the Software
+   without meaningful differentiation or added value.
+
+These supplemental terms are indivisible from this license. Use of the
+Software constitutes acceptance of all terms.

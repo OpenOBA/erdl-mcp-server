@@ -1,13 +1,13 @@
 # ERDL MCP Server
 
-> **Give your Agent deterministic rules. Say it once. Never repeat yourself.**
+> **Deterministic rules for AI Agents. Say it once. Never repeat.**
 
 [![npm version](https://img.shields.io/npm/v/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![license](https://img.shields.io/npm/l/@openoba-ai/erdl-mcp)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
 [![tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
 
-**ERDL** (Entity-Rule Definition Language) is a deterministic rule engine for AI agents. 30 built-in presets. Unlimited personal rules. Free forever.
+ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 built-in presets. Unlimited personal rules. **Free forever.**
 
 ---
 
@@ -34,6 +34,41 @@ npx -y @openoba-ai/erdl-mcp
 ```bash
 npx -y @openoba-ai/erdl-mcp --lang zh
 ```
+
+---
+
+## Free vs Pro
+
+| | Free | Pro |
+|------|:---:|:---:|
+| 5 MCP Tools | ✅ | ✅ |
+| 30 Preset Rules | ✅ | ✅ |
+| Unlimited Personal Rules | ✅ | ✅ |
+| Chinese / English | ✅ | ✅ |
+| All 11 Operators | ✅ | ✅ |
+| MIT Open Source | ✅ | ✅ |
+| **Execution Rings 1–2** (REQUEST_HUMAN, ESCALATE, ROLLBACK, QUARANTINE) | — | ✅ |
+| **Guardian Agent Role** (监管者模式) | — | ✅ |
+| **Audit Export** (OCSF / OTLP) | — | ✅ |
+| **Team Rules** (组织级规则共享) | — | ✅ |
+| **Dashboard** (规则命中统计) | — | ✅ |
+| **Enterprise Compliance Packs** (GB/Z 185, NIST, EU AI Act) | — | Enterprise |
+
+[Get a Pro License →](https://openoba.com/erdl-mcp/pro)
+
+---
+
+## Why ERDL vs SKILL.md / Prompt Rules?
+
+| | Prompt-Based Rules | ERDL MCP Server |
+|---|:---:|:---:|
+| Execution | LLM "tries" to follow | **Deterministic engine** — guaranteed |
+| Visibility | Invisible, can't tell if it worked | `erdl_explain` shows every decision |
+| Reliability | LLM may ignore or forget | **Zero hallucination** — condition match is mathematical |
+| Testing | Manual | `erdl_simulate` with 3 auto-scenarios |
+| Portability | Single platform | **All MCP-compatible Agents** |
+
+ERDL rules don't suggest. They don't hope. They **enforce**.
 
 ---
 
@@ -130,7 +165,7 @@ rules:
     enabled: true
 ```
 
-[Full tutorial →](./docs/tutorial-create-rules.md)
+[📚 Full tutorial: Create Your First ERDL Rule →](./docs/tutorial-create-rules.md)
 
 ---
 
@@ -139,38 +174,11 @@ rules:
 ```bash
 npx @openoba-ai/erdl-mcp               # Start MCP server
 npx @openoba-ai/erdl-mcp --lang zh     # Chinese mode
+npx @openoba-ai/erdl-mcp --pro-key sk-xxx  # Activate Pro license
 npx @openoba-ai/erdl-mcp --upgrade     # Upgrade to latest
 npx @openoba-ai/erdl-mcp --uninstall   # Clean removal
 npx @openoba-ai/erdl-mcp --help        # Full usage
 ```
-
----
-
-## Available on MCP Platforms
-
-| Platform | Status |
-|----------|--------|
-| **[npm](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)** | ✅ Published |
-| **[Glama](https://glama.ai)** | Coming soon |
-| **[Smithery](https://smithery.ai)** | Coming soon |
-| **[MCPize](https://mcpize.com)** | Coming soon |
-| **[PulseMCP](https://pulsemcp.com)** | Coming soon |
-| **[mcp.so](https://mcp.so)** | Coming soon |
-
----
-
-## Roadmap
-
-- [x] 30 built-in presets (coding, engineering, writing, design)
-- [x] 5 MCP tools + 2 resources
-- [x] Chinese/English auto-switch (`--lang zh`)
-- [x] Usage tracking + contextual Pro recommendations
-- [x] Zero-dependency SafeExpr engine
-- [x] MIT open source
-- [ ] Rules Store — discover and install community rule packs
-- [ ] Team rules — share rules across your organization
-- [ ] Audit dashboard — track rule usage and compliance
-- [ ] ERDL Verified — certified rule packs for enterprise compliance
 
 ---
 
