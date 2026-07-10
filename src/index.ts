@@ -72,7 +72,6 @@ Usage:
   npx ${PKG_NAME} --upgrade     Upgrade to the latest version
   npx ${PKG_NAME} --uninstall   Remove all ERDL files and configurations
   npx ${PKG_NAME} --setup       Show MCP client configuration
-  npx ${PKG_NAME} --setup -g    Show config for global install
 
 Rules directory: ~/.openoba/rules/
 Docs: https://openoba.com/erdl
@@ -175,9 +174,10 @@ function upgrade(): void {
 
 /** Handle --setup: generate MCP configuration for supported clients */
 function setup(): void {
-  const isGlobal = process.argv.includes('--global') || process.argv.includes('-g')
-  const cmd = isGlobal ? 'erdl-mcp' : `npx -y ${PKG_NAME}@latest`
-  
+  // Always use npx — the only config that works on every OS, every platform, consistently.
+  const command = 'npx'
+  const args = ['-y', `${PKG_NAME}@latest`]
+
   console.error('[erdl-mcp] 🔧 ERDL MCP Setup')
   console.error('')
   console.error('Copy the section for your MCP client:')
@@ -185,11 +185,11 @@ function setup(): void {
 
   // Claude Desktop
   console.error('━━━ Claude Desktop ━━━')
-  console.error(`Add to ~/Library/Application Support/Claude/claude_desktop_config.json:`)
+  console.error('Add to ~/Library/Application Support/Claude/claude_desktop_config.json:')
   console.error('')
   console.error(JSON.stringify({
     mcpServers: {
-      erdl: { command: cmd.split(' ')[0], args: cmd.split(' ').slice(1) }
+      erdl: { command, args }
     }
   }, null, 2))
   console.error('')
@@ -200,14 +200,15 @@ function setup(): void {
   console.error('')
   console.error(JSON.stringify({
     mcpServers: {
-      erdl: { command: cmd.split(' ')[0], args: cmd.split(' ').slice(1) }
+      erdl: { command, args }
     }
   }, null, 2))
   console.error('')
 
   // OpenClaw
   console.error('━━━ OpenClaw ━━━')
-  console.error(`  openclaw mcp set erdl '{"command":"${cmd.split(' ')[0]}","args":${JSON.stringify(cmd.split(' ').slice(1))}}'`)
+  const openclawConfig = JSON.stringify({ command, args }).replace(/"/g, '\\"')
+  console.error(`  openclaw mcp set erdl "${openclawConfig}"`)
   console.error('')
 
   // VS Code / GitHub Copilot
@@ -217,7 +218,7 @@ function setup(): void {
   console.error(JSON.stringify({
     inputs: [],
     servers: {
-      erdl: { type: 'stdio', command: cmd.split(' ')[0], args: cmd.split(' ').slice(1) }
+      erdl: { type: 'stdio', command, args }
     }
   }, null, 2))
   console.error('')
