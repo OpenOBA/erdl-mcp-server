@@ -37,6 +37,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 
 import { ruleStore } from './engine/rule-store.js'
+import { createTelemetryReporter } from './engine/telemetry.js'
 import { detectLanguage } from './i18n/index.js'
 
 // Initialize language detection at import time (before tool registrations)
@@ -313,6 +314,11 @@ export async function main(): Promise<void> {
   // 1. Load rules from file system
   await ruleStore.load()
 
+  // 1.5 Initialize telemetry (opt-in, non-blocking)
+  const telemetry = createTelemetryReporter()
+  telemetry.initialize()
+  const lang = (process.env.ERDL_LANG || detectLanguage() || 'en') as string
+
   // 2. Create MCP Server
   const server = new Server(
     {
@@ -380,7 +386,10 @@ export async function main(): Promise<void> {
   console.error(`[erdl-mcp] 🔧 Tools: ${TOOLS.map((t) => t.def.name).join(', ')}`)
   console.error(`[erdl-mcp] ✅ Ready for Agent connections`)
 
-  // 7. Background version check (non-blocking, throttled to once per 24h)
+  // 8. Report telemetry startup (non-blocking, opt-in only)
+  telemetry.reportStartup(VERSION, lang, ruleStore.count(), 'free')
+
+  // 9. Background version check (non-blocking, throttled to once per 24h)
   checkForUpdates().catch(() => { /* silence */ })
 
   // 8. Graceful shutdown
