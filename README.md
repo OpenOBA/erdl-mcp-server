@@ -111,7 +111,7 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
   "mcpServers": {
     "erdl": {
       "command": "npx",
-      "args": ["-y", "@openoba-ai/erdl-mcp"]
+      "args": ["-y", "@openoba-ai/erdl-mcp@latest"]
     }
   }
 }
@@ -128,7 +128,7 @@ Add to `.cursor/mcp.json` in your project root.
 ### OpenClaw
 
 ```bash
-openclaw mcp set erdl '{"command":"npx","args":["-y","@openoba-ai/erdl-mcp"]}'
+openclaw mcp set erdl '{"command":"npx","args":["-y","@openoba-ai/erdl-mcp@latest"]}'
 ```
 
 ### VS Code / GitHub Copilot
@@ -172,13 +172,18 @@ rules:
 ## CLI Reference
 
 ```bash
-npx @openoba-ai/erdl-mcp               # Start MCP server
-npx @openoba-ai/erdl-mcp --lang zh     # Chinese mode
-npx @openoba-ai/erdl-mcp --pro-key sk-xxx  # Activate Pro license
-npx @openoba-ai/erdl-mcp --upgrade     # Upgrade to latest
-npx @openoba-ai/erdl-mcp --uninstall   # Clean removal
-npx @openoba-ai/erdl-mcp --help        # Full usage
+npx @openoba-ai/erdl-mcp@latest          # Start MCP server (always latest)
+npx @openoba-ai/erdl-mcp@latest --lang zh # Chinese mode
+npx @openoba-ai/erdl-mcp@latest --pro-key sk-xxx  # Activate Pro license
+npx @openoba-ai/erdl-mcp@latest --upgrade  # Upgrade to latest
+npx @openoba-ai/erdl-mcp@latest --uninstall  # Clean removal
+npx @openoba-ai/erdl-mcp@latest --help     # Full usage
 ```
+
+> **Stuck on an old version?** npx caches your first install. If `--version` shows an older release, clean the cache:
+> ```bash
+> npm cache npx rm @openoba-ai/erdl-mcp
+> ```
 
 ---
 
