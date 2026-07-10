@@ -182,8 +182,9 @@ npx @openoba-ai/erdl-mcp@latest --help     # Full usage
 
 > **Stuck on an old version?** npx caches your first install. If `--version` shows an older release, clean the cache:
 > ```bash
-> npm cache npx rm @openoba-ai/erdl-mcp
+> npm cache clean --force
 > ```
+> Then re-run: `npx @openoba-ai/erdl-mcp@latest`
 
 ---
 
