@@ -87,25 +87,48 @@ function showVersion(): void {
 /** Handle --uninstall: remove all ERDL traces from the system */
 function uninstall(): void {
   const home = homedir()
-  const dirs = [
-    join(home, '.openoba', 'rules'),
-    join(home, '.openoba'),
-  ]
+  const openobaDir = join(home, '.openoba')
 
   console.error('[erdl-mcp] 🧹 ERDL Uninstaller')
   console.error('[erdl-mcp] This will remove all ERDL MCP Server files and configurations.')
 
+  const filesToRemove = [
+    join(openobaDir, 'rules'),
+    join(openobaDir, '.telemetry.json'),
+    join(openobaDir, '.last_version_check'),
+    join(openobaDir, '.deploy_id'),
+  ]
+
   let removed = 0
-  for (const dir of dirs) {
-    if (existsSync(dir)) {
+
+  // Remove individual files first (cleaner error messages)
+  for (const file of filesToRemove) {
+    if (existsSync(file)) {
       try {
-        rmSync(dir, { recursive: true, force: true })
-        console.error(`[erdl-mcp]   Removed: ${dir}`)
+        rmSync(file, { recursive: true, force: true })
+        console.error(`[erdl-mcp]   Removed: ${file.replace(home, '~')}`)
         removed++
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        console.error(`[erdl-mcp]   Failed to remove ${dir}: ${msg}`)
+        console.error(`[erdl-mcp]   Failed to remove ${file.replace(home, '~')}: ${msg}`)
       }
+    }
+  }
+
+  // Remove the .openoba directory if empty after cleanup
+  if (existsSync(openobaDir)) {
+    try {
+      const remaining = readdirSync(openobaDir)
+      if (remaining.length === 0) {
+        rmSync(openobaDir, { force: true })
+        console.error(`[erdl-mcp]   Removed: ~/.openoba/ (empty directory)`)
+        removed++
+      } else {
+        console.error(`[erdl-mcp]   Skipped ~/.openoba/ — directory not empty (remaining: ${remaining.join(', ')})`)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[erdl-mcp]   Failed to check ~/.openoba/: ${msg}`)
     }
   }
 

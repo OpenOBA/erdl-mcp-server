@@ -21,14 +21,6 @@
   "bin": {
     "erdl-mcp": "bin/erdl-mcp.js"
   },
-  "files": [
-    "bin/",
-    "dist/",
-    "rules/",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/index.ts",
