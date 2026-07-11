@@ -159,31 +159,33 @@ function buildFeedback(result, toolName, lang) {
 // Decision mapping: ERDL Decision → OpenClaw Policy Decision
 // ============================================
 
-function toPolicyDecision(result) {
+function toPolicyDecision(result, lang) {
+  const expl = result.primaryExplanation ? t(result.primaryExplanation, lang) : ''
+  const alt = result.primaryAlternative ? t(result.primaryAlternative, lang) : ''
+  const reason = result.primaryReason ?? ''
+
   switch (result.decision) {
-    case 'DENY':
-      return {
-        block: true,
-        blockReason: `🛑 ERDL Guard · ${result.primaryReason ?? 'Blocked by rule'}`,
-      }
-    case 'EMERGENCY_HALT':
-      return {
-        block: true,
-        blockReason: `🚨 ERDL HALT · ${result.primaryReason ?? 'Emergency halt triggered'}`,
-      }
-    case 'REQUEST_HUMAN':
-      return {
-        requireApproval: {
-          title: 'ERDL Guard — Approval Required',
-          description: result.primaryReason ?? 'This action requires human approval per ERDL rules',
-          severity: 'warning' as const,
-        },
-      }
-    case 'CORRECT':
-      return {
-        block: true,
-        blockReason: `🔧 ERDL Correct · ${result.primaryCorrection ?? result.primaryReason ?? 'Correction needed'}`,
-      }
+    case 'DENY': {
+      let msg = `🛑 ERDL Guard · ${reason}`
+      if (expl && expl !== reason) msg += `\n\n${expl}`
+      if (alt) msg += `\n\n${lang === 'zh' ? '替代方案' : 'Alternative'}: ${alt}`
+      return { block: true, blockReason: msg }
+    }
+    case 'EMERGENCY_HALT': {
+      let msg = `🚨 ERDL HALT · ${reason}`
+      if (expl && expl !== reason) msg += `\n\n${expl}`
+      return { block: true, blockReason: msg }
+    }
+    case 'REQUEST_HUMAN': {
+      let desc = reason
+      if (expl) desc = `${reason}\n\n${expl}`
+      return { requireApproval: { title: 'ERDL Guard — Approval Required', description: desc, severity: 'warning' as const } }
+    }
+    case 'CORRECT': {
+      let msg = `🔧 ERDL Correct · ${result.primaryCorrection ?? reason}`
+      if (expl) msg += `\n\n${expl}`
+      return { block: true, blockReason: msg }
+    }
     case 'ALLOW':
     case 'PASS':
     default:
@@ -216,7 +218,7 @@ export default definePluginEntry({
         // Cache for after_tool_call feedback
         cacheResult(event.toolCallId, result)
 
-        const decision = toPolicyDecision(result)
+        const decision = toPolicyDecision(result, lang)
 
         if (result.totalMatched > 0) {
           const matched = result.matchedRules.map(r => `${r.ruleId}(${r.decision})`).join(', ')
