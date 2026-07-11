@@ -2,6 +2,28 @@
 
 All notable changes to ERDL MCP Server will be documented in this file.
 
+## [1.1.0] — 2026-07-11
+
+### Added
+- **@openoba-ai/erdl-openclaw** — OpenClaw Plugin with `registerTrustedToolPolicy` for hard tool call interception
+- **30 rules v2**: every rule now has bilingual explanation (zh + en) and DENY rules have alternative suggestions
+- `explanation` and `alternative` fields in `RuleAction`, `RuleMatch`, `EvaluationResult`
+- `after_tool_call` friendly feedback injection via `registerAgentToolResultMiddleware`
+- ERDL Plugin coexists with ERDL MCP Server on the same OpenClaw instance
+
+### Fixed
+- install.ps1: `--omit=dev` deadlock preventing npm run build (P0)
+- install.ps1: undefined `$check` variable → `$ok`/`$fail` status markers
+- install.ps1: removed Unix `rm -rf` → `Remove-Item`
+- install.ps1: replaced Unicode box-drawing chars with ASCII (PowerShell parser compatibility)
+- install.sh: replaced `sed` dependency with `node -e` for cross-platform compatibility
+- install.sh: removed `--omit=dev`
+
+### Changed
+- Both install scripts now check Node.js >=18 and report errors per-step
+- Both install scripts now include `--setup` hint in output
+- Rule definitions upgraded from v1 to v2 (backward compatible)
+
 ## [1.0.0] — 2026-07-10
 
 ### Added

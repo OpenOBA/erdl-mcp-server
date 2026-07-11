@@ -25,7 +25,11 @@ ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 
 ## Quick Start
 
 ```bash
+# Start MCP Server (5 tools, 30 presets — all MCP clients)
 npx -y @openoba-ai/erdl-mcp
+
+# Or: install OpenClaw Plugin for hardware enforcement
+openclaw plugins install @openoba-ai/erdl-openclaw
 ```
 
 30 rules active immediately. No account. No configuration. No API key.
@@ -146,8 +150,14 @@ Add to `.cursor/mcp.json` in your project root.
 ### OpenClaw
 
 ```bash
+# MCP Server (all MCP clients)
 openclaw mcp set erdl '{"command":"npx","args":["-y","@openoba-ai/erdl-mcp@latest"]}'
+
+# OpenClaw Plugin (hard enforcement via before_tool_call)
+openclaw plugins install @openoba-ai/erdl-openclaw
 ```
+
+> **Plugin vs MCP Server**: The MCP Server gives your Agent ERDL tools. The Plugin adds **deterministic tool call interception** — rules run BEFORE every exec/write/search, no relying on LLM self-discipline. Install both for maximum protection.
 
 ### VS Code / GitHub Copilot
 
