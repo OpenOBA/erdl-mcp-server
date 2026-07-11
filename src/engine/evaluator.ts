@@ -171,6 +171,8 @@ export class Evaluator {
       decision: rule.action.decision,
       instruction: rule.action.instruction,
       reason: rule.action.reason,
+      explanation: rule.action.explanation,
+      alternative: rule.action.alternative,
       ring: rule.action.ring ?? ring,
       correction: rule.action.correction,
       priority: rule.priority,

@@ -70,6 +70,16 @@ export interface RuleAction {
   instruction?: string
   /** Reason shown to user when blocked or halted */
   reason?: string
+  /**
+   * Human-friendly bilingual explanation of WHY this rule exists and WHAT harm it prevents.
+   * Shown in agent chat feedback, not just on DENY — also on ALLOW as context.
+   */
+  explanation?: string | { zh: string; en: string }
+  /**
+   * Suggested alternative action when the operation is blocked.
+   * Shown as "替代方案: ..." or "Alternative: ...".
+   */
+  alternative?: string | { zh: string; en: string }
   /** Execution Ring level (0-3). Guardian rules default Ring 0. */
   ring?: RingLevel
   /** Correction target text (CORRECT decision) */
@@ -157,6 +167,8 @@ export interface RuleMatch {
   decision: Decision
   instruction?: string
   reason?: string
+  explanation?: string | { zh: string; en: string }
+  alternative?: string | { zh: string; en: string }
   ring?: RingLevel
   correction?: string
   priority: number
@@ -172,6 +184,8 @@ export interface EvaluationResult {
   /** The highest-priority instruction (for ALLOW) or reason (for DENY) */
   primaryInstruction?: string
   primaryReason?: string
+  primaryExplanation?: string | { zh: string; en: string }
+  primaryAlternative?: string | { zh: string; en: string }
   /** Correction text (CORRECT decision) */
   primaryCorrection?: string
 

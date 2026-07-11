@@ -1,15 +1,14 @@
 /**
  * ERDL OpenClaw Plugin — Plugin Entry
  *
- * Registers a trusted tool policy that intercepts every tool call,
- * evaluates it against loaded ERDL rules, and blocks/corrects/requests-approval
- * based on the rule decision.
+ * Registers a trusted tool policy (before_tool_call) for hard enforcement,
+ * and an after_tool_call hook for friendly feedback to users.
  *
  * This gives ERDL the "hard enforcement" capability — rules are evaluated
  * deterministically before the tool executes, not relying on LLM self-discipline.
  *
  * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
- * @since 2026-07-11
+ * @since 2026-07-11 · updated 2026-07-11 (after_tool_call feedback)
  * @license MIT
  */
 
@@ -21,7 +20,7 @@ import { RuleStore } from "./engine/rule-store.js"
 import { Evaluator } from "./engine/evaluator.js"
 
 // ============================================
-// Lazy initialization (loaded once on first tool call)
+// Lazy initialization
 // ============================================
 
 let ruleStore = null
@@ -30,23 +29,40 @@ let initialized = false
 
 async function ensureInitialized() {
   if (initialized) return
-
   ruleStore = new RuleStore()
   await ruleStore.load()
-
   evaluator = new Evaluator()
   initialized = true
-
   const all = ruleStore.getAll()
   console.log(`[erdl] ERDL Action Guard loaded: ${all.length} rules active`)
 }
 
-function getRules() {
-  return ruleStore?.getAll() ?? []
+function getRules() { return ruleStore?.getAll() ?? [] }
+function getEvaluator() { return evaluator }
+
+// ============================================
+// Cross-hook cache: toolCallId → evaluation result
+// (before_tool_call evaluates, after_tool_call adds feedback)
+// ============================================
+
+const evalCache = new Map()
+const MAX_CACHE = 100
+
+function cacheResult(toolCallId, result) {
+  if (!toolCallId) return
+  if (evalCache.size >= MAX_CACHE) {
+    // FIFO eviction
+    const first = evalCache.keys().next().value
+    evalCache.delete(first)
+  }
+  evalCache.set(toolCallId, result)
 }
 
-function getEvaluator() {
-  return evaluator
+function popResult(toolCallId) {
+  if (!toolCallId) return null
+  const r = evalCache.get(toolCallId)
+  evalCache.delete(toolCallId)
+  return r ?? null
 }
 
 // ============================================
@@ -55,12 +71,9 @@ function getEvaluator() {
 
 function buildEvalContext(toolName, params) {
   const ctx = { 'tool.name': toolName }
-
   for (const [key, value] of Object.entries(params)) {
     ctx[`tool.args.${key}`] = value
   }
-
-  // Special handling for well-known tool types
   if (toolName === 'exec' && typeof params.command === 'string') {
     ctx['tool.args.command'] = params.command
     if (params.cwd) ctx['tool.args.cwd'] = params.cwd
@@ -72,8 +85,74 @@ function buildEvalContext(toolName, params) {
   if (toolName === 'web_search' && typeof params.query === 'string') {
     ctx['tool.args.query'] = params.query
   }
-
   return ctx
+}
+
+// ============================================
+// Resolve i18n field: string | { zh, en } → preferred language
+// ============================================
+
+function t(field, lang) {
+  if (!field) return ''
+  if (typeof field === 'string') return field
+  if (lang === 'zh' && field.zh) return field.zh
+  return field.en || field.zh || ''
+}
+
+// ============================================
+// Build friendly feedback text for after_tool_call
+// ============================================
+
+function buildFeedback(result, toolName, lang) {
+  if (!result || result.totalMatched === 0) {
+    return `✅ ERDL · ${result?.totalEvaluated ?? 0} rules checked · PASS`
+  }
+
+  const { decision, matchedRules, totalEvaluated, totalMatched, primaryExplanation, primaryAlternative } = result
+
+  // Separate block rules and advisory rules
+  const blockRules = matchedRules.filter(r => r.decision === 'DENY' || r.decision === 'EMERGENCY_HALT' || r.decision === 'CORRECT')
+  const humanRules = matchedRules.filter(r => r.decision === 'REQUEST_HUMAN')
+  const advisoryRules = matchedRules.filter(r => r.decision === 'ALLOW')
+
+  const lines = []
+
+  if (blockRules.length > 0) {
+    // Show the blocking rule prominently
+    const rule = blockRules[0]
+    lines.push(`🛑 ${rule.ruleId} ${rule.ruleName} · ${decision}`)
+    lines.push(`   ${t(rule.reason, lang)}`)
+
+    const expl = t(rule.explanation, lang)
+    if (expl && expl !== t(rule.reason, lang)) {
+      lines.push(`   ${expl}`)
+    }
+
+    const alt = t(rule.alternative, lang)
+    if (alt) {
+      lines.push(`   ${lang === 'zh' ? '替代方案' : 'Alternative'}: ${alt}`)
+    }
+  } else if (humanRules.length > 0) {
+    const rule = humanRules[0]
+    lines.push(`👤 ${rule.ruleId} ${rule.ruleName} · ${lang === 'zh' ? '需要人工审批' : 'Approval Required'}`)
+    lines.push(`   ${t(rule.reason, lang)}`)
+    const expl = t(rule.explanation, lang)
+    if (expl) lines.push(`   ${expl}`)
+  } else {
+    // All ALLOW — show summary + one-line reminder of the most relevant advisory
+    lines.push(`✅ ERDL · ${totalEvaluated} ${lang === 'zh' ? '条规则检查通过' : 'rules checked'} · ALLOW`)
+
+    // Pick the highest-priority advisory rule to highlight (not all)
+    if (advisoryRules.length > 0) {
+      const top = advisoryRules[0]
+      const instruction = top.instruction || t(top.reason, lang)
+      if (instruction && instruction.length < 80) {
+        lines.push(`   📌 ${top.ruleId} ${top.ruleName}: ${instruction}`)
+      }
+    }
+  }
+
+  return lines.join('\n')
 }
 
 // ============================================
@@ -87,13 +166,11 @@ function toPolicyDecision(result) {
         block: true,
         blockReason: `🛑 ERDL Guard · ${result.primaryReason ?? 'Blocked by rule'}`,
       }
-
     case 'EMERGENCY_HALT':
       return {
         block: true,
         blockReason: `🚨 ERDL HALT · ${result.primaryReason ?? 'Emergency halt triggered'}`,
       }
-
     case 'REQUEST_HUMAN':
       return {
         requireApproval: {
@@ -102,13 +179,11 @@ function toPolicyDecision(result) {
           severity: 'warning' as const,
         },
       }
-
     case 'CORRECT':
       return {
         block: true,
         blockReason: `🔧 ERDL Correct · ${result.primaryCorrection ?? result.primaryReason ?? 'Correction needed'}`,
       }
-
     case 'ALLOW':
     case 'PASS':
     default:
@@ -126,27 +201,23 @@ export default definePluginEntry({
   description:
     "Deterministic rules for AI Agents — intercepts every tool call and enforces coding, writing, design, and engineering rules.",
   register(api) {
+    // ===== before_tool_call: hard enforcement =====
     api.registerTrustedToolPolicy({
       id: "guard",
       description:
         "ERDL rules evaluate every tool call before execution. Rules define what is ALLOWED, DENIED, CORRECTED, or requires human approval.",
       async evaluate(event, ctx) {
-        // 1. Skip ERDL's own MCP tools
         if (event.toolName.startsWith("erdl_")) return
-
-        // 2. Ensure rules are loaded
         await ensureInitialized()
 
-        // 3. Build evaluation context from the tool call
         const evalCtx = buildEvalContext(event.toolName, event.params)
-
-        // 4. Evaluate against loaded rules
         const result = getEvaluator().evaluate(getRules(), evalCtx)
 
-        // 5. Map to OpenClaw policy decision
+        // Cache for after_tool_call feedback
+        cacheResult(event.toolCallId, result)
+
         const decision = toPolicyDecision(result)
 
-        // 6. Log matched rules
         if (result.totalMatched > 0) {
           const matched = result.matchedRules.map(r => `${r.ruleId}(${r.decision})`).join(', ')
           console.log(`[erdl] ${event.toolName} → ${result.decision} (${result.totalMatched} rules matched: ${matched})`)
@@ -154,6 +225,20 @@ export default definePluginEntry({
 
         return decision
       },
+    })
+
+    // ===== after_tool_call: friendly feedback =====
+    // Inject ERDL status text into every tool call result
+    // so users see the Guard working, not just when rules block.
+
+    const lang = 'zh' // Default to Chinese for OpenOBA users
+
+    api.registerAgentToolResultMiddleware(async (item, ctx) => {
+      const result = popResult(item.toolCallId)
+      if (!result) return
+
+      const feedback = buildFeedback(result, item.toolName, lang)
+      return { content: item.content ? `${item.content}\n\n${feedback}` : feedback }
     })
   },
 })
