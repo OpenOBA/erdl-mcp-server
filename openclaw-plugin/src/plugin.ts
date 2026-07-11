@@ -121,7 +121,7 @@ function toPolicyDecision(result) {
 // ============================================
 
 export default definePluginEntry({
-  id: "erdl",
+  id: "erdl-guard",
   name: "ERDL Action Guard",
   description:
     "Deterministic rules for AI Agents — intercepts every tool call and enforces coding, writing, design, and engineering rules.",

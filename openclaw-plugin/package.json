@@ -4,6 +4,12 @@
   "type": "module",
   "description": "ERDL Action Guard as an OpenClaw Plugin — deterministic rules that intercept every tool call before execution",
   "main": "dist/plugin.js",
+  "openclaw": {
+    "extensions": ["./dist/plugin.js"],
+    "compat": {
+      "pluginApi": ">=2026.6.1"
+    }
+  },
   "files": [
     "dist/",
     "openclaw.plugin.json",
@@ -36,7 +42,7 @@
     "url": "https://github.com/OpenOBA/erdl-mcp-server.git",
     "directory": "openclaw-plugin"
   },
-  "peerDependencies": {
-    "openclaw": "*"
+  "dependencies": {
+    "js-yaml": "^4.1.0"
   }
 }

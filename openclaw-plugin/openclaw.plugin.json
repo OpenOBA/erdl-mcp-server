@@ -1,5 +1,5 @@
 {
-  "id": "erdl",
+  "id": "erdl-guard",
   "name": "ERDL Action Guard",
   "version": "1.0.0-alpha.1",
   "description": "Deterministic rules that give your Agent muscle memory — intercepts every tool call and enforces coding, writing, design, and engineering rules.",
