@@ -1,0 +1,26 @@
+{
+  "id": "erdl",
+  "name": "ERDL Action Guard",
+  "version": "1.0.0-alpha.1",
+  "description": "Deterministic rules that give your Agent muscle memory — intercepts every tool call and enforces coding, writing, design, and engineering rules.",
+  "contracts": {
+    "trustedToolPolicies": ["guard"]
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "rulesDir": {
+        "type": "string",
+        "description": "Directory for custom ERDL rules (default: ~/.openoba/rules)"
+      },
+      "verbose": {
+        "type": "boolean",
+        "description": "Log matched rules to the console"
+      }
+    }
+  }
+}

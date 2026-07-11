@@ -1,0 +1,42 @@
+{
+  "name": "@openoba-ai/erdl-openclaw",
+  "version": "1.0.0-alpha.1",
+  "type": "module",
+  "description": "ERDL Action Guard as an OpenClaw Plugin — deterministic rules that intercept every tool call before execution",
+  "main": "dist/plugin.js",
+  "files": [
+    "dist/",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:prep": "node scripts/build-prep.js",
+    "build:tsc": "tsc -p tsconfig.json",
+    "build:post": "node -e \"const{cp}=require('fs/promises');cp('src/engine','dist/engine',{recursive:true,force:true});cp('src/presets','dist/presets',{recursive:true,force:true}).then(()=>console.log('build:post done'))\"",
+    "build": "npm run build:prep && npm run build:tsc && npm run build:post",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'No tests yet' && exit 0",
+    "quality": "npm run build",
+    "prepublishOnly": "npm run quality"
+  },
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "erdl",
+    "rules-engine",
+    "ai-agent",
+    "agent-guard",
+    "tool-policy"
+  ],
+  "author": "OpenOBA <support@openoba.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OpenOBA/erdl-mcp-server.git",
+    "directory": "openclaw-plugin"
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  }
+}
