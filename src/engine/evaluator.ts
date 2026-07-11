@@ -67,6 +67,8 @@ export class Evaluator {
     let finalInstruction: string | undefined
     let finalReason: string | undefined
     let finalCorrection: string | undefined
+    let finalExplanation: RuleDefinition['action']['explanation'] | undefined
+    let finalAlternative: RuleDefinition['action']['alternative'] | undefined
 
     for (const ring of ringKeys) {
       const ringRules = byRing.get(ring)!
@@ -98,9 +100,11 @@ export class Evaluator {
           }
           if (match.reason && match.decision === 'REQUEST_HUMAN') {
             finalReason = match.reason
+            finalExplanation = match.explanation
           }
           if (match.correction && match.decision === 'CORRECT') {
             finalCorrection = match.correction
+            finalExplanation = match.explanation
           }
           continue // keep evaluating for potential DENY rules
         }
@@ -110,6 +114,8 @@ export class Evaluator {
         finalReason = match.reason
         finalInstruction = match.instruction
         finalCorrection = match.correction
+        finalExplanation = match.explanation
+        finalAlternative = match.alternative
 
         // Ring 0 BLOCK/HALT: short-circuit all further evaluation
         if (ring === 0 && (match.decision === 'EMERGENCY_HALT' || match.decision === 'DENY')) {
@@ -117,6 +123,8 @@ export class Evaluator {
             decision: finalDecision,
             matchedRules: allMatched,
             primaryReason: finalReason ?? `${finalDecision} triggered by Ring 0 rule`,
+            primaryExplanation: finalExplanation,
+            primaryAlternative: finalAlternative,
             totalEvaluated: enabled.length,
             totalMatched: allMatched.length,
           }
@@ -158,6 +166,8 @@ export class Evaluator {
       primaryReason: finalReason,
       primaryInstruction: finalInstruction,
       primaryCorrection: finalCorrection,
+      primaryExplanation: finalExplanation,
+      primaryAlternative: finalAlternative,
       totalEvaluated: enabled.length,
       totalMatched: allMatched.length,
     }
