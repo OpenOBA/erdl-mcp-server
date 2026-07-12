@@ -207,6 +207,8 @@ rules:
 
 [📚 Full tutorial: Create Your First ERDL Rule →](./docs/tutorial-create-rules.md) ([English](./docs/tutorial-create-rules.en.md))
 
+[📖 Complete Rule Reference (all 67 rules with modification guides) →](./docs/rule-reference.md) ([English](./docs/rule-reference.en.md))
+
 ---
 
 ## CLI Reference
