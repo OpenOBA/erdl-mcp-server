@@ -1,0 +1,25 @@
+# ERDL Rule — NAMING_CONVENTIONS
+# Category: coding
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "naming_conventions"
+  description: "命名规范提醒"
+  tags: [coding]
+
+rules:
+  - name: "naming_conventions"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: "function|const|class|interface"
+    then: ALLOW
+    message: "变量/函数 camelCase，类/接口 PascalCase，常量 UPPER_SNAKE_CASE。"

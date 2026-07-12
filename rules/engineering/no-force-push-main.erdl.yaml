@@ -1,0 +1,26 @@
+# ERDL Rule — NO_FORCE_PUSH_MAIN
+# Category: engineering
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_force_push_main"
+  description: "拦截 git push --force 主分支"
+  tags: [engineering]
+
+rules:
+  - name: "no_force_push_main"
+    priority: 1
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: eq
+          value: "exec"
+        - field: "tool.args.command"
+          operator: match
+          value: "push.*(-f|--force)"
+    then: DENY
+    override: critical
+    message: "绝对禁止 git push --force 到 main/master 分支。替代：force-with-lease 或新分支合并。"

@@ -74,7 +74,6 @@ export async function simulateHandler(args: {
     name: args.ruleName,
     description: args.ruleName,
     category: args.category as RuleCategory,
-    triggers: args.triggers ?? [],
     conditions: [{
       kind: 'context_matches',
       field: args.matchField ?? 'tool.name',

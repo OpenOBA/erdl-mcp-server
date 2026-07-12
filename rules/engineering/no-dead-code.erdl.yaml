@@ -1,0 +1,22 @@
+# ERDL Rule — NO DEAD CODE
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_dead_code"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "no_dead_code"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: CORRECT
+    message: "删除 dead code：注释掉的代码、不再调用的函数、废弃的实验分支。Git会记得。"

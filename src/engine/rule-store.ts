@@ -1,11 +1,18 @@
 /**
- * ERDL MCP Server 閳?Rule Store
+ * ERDL MCP Server — Rule Store
  *
  * Loads rules from file system, watches for changes, tracks hit counts.
  * Uses ~/.openoba/rules/ as the rules directory.
  *
- * @author 閸炴劖鏃﹂悞?(Tang Haoran) 璺?OpenOBA AI 閹笛嗩攽鐎?
- * @since 2026-07-07
+ * Strictly follows ERDL SPEC §5 file format:
+ *   rules:
+ *     - name: "rule-name"
+ *       when:             # structured: { logic, conditions: [{ field, operator, value }] }
+ *       then: BLOCK
+ *       message: "..."
+ *
+ * @author 唐浩然 (Tang Haoran) · OpenOBA AI 执行官
+ * @since 2026-07-07 · refactored 2026-07-12 (SPEC §5 strict compliance)
  * @license MIT
  */
 
@@ -13,43 +20,14 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import * as yaml from 'js-yaml'
-import { compileWhen } from './erdl-expr-parser.js'
-import { codingRules } from '../presets/coding/all.js'
-import { designRules } from '../presets/design/all.js'
-import { allWritingRules } from '../presets/writing/all.js'
-import { engineeringRules } from '../presets/engineering/all.js'
 import type { RuleDefinition, RuleCategory, RuleAction, RuleCondition, ConditionOperator, AgentIdentity } from './rule-definition.js'
 
 // ============================================
 // Types
 // ============================================
 
-interface YamlRule {
-  id?: string
-  name?: string
-  description?: string
-  category?: string
-  triggers?: string[]
-  conditions?: Array<{
-    kind?: string
-    keywords?: string[]
-    pattern?: string
-    field?: string
-    context_matches?: string
-    value?: unknown
-  }>
-  action?: {
-    decision?: string
-    instruction?: string
-    reason?: string
-  }
-  priority?: number
-  enabled?: boolean
-  version?: number
-}
-
 interface YamlFile {
-  rules?: YamlRule[] | Record<string, unknown>
+  rules?: Record<string, unknown>[]
   agent?: { role?: string; observes?: string[] }
   metadata?: Record<string, unknown>
 }
@@ -75,77 +53,25 @@ export class RuleStore {
     this.onChangeCallback = cb
   }
 
-  /** Load all .yaml rule files from the rules directory */
+  /** Load all .erdl.yaml / .yaml rule files from the rules directory */
   async load(): Promise<number> {
     const dir = RuleStore.getRulesDir()
 
-    // Ensure directory exists
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true })
       console.error(`[erdl-mcp] Created rules directory: ${dir}`)
     }
 
-    // Load built-in presets from TypeScript source (shipped with the package)
-    this.loadBuiltinPresets()
-
     const loaded = this.loadFromDir(dir)
-
-    // Re-apply built-in presets to ensure they override any stale YAML versions.
-    // This guarantees that npm update → new preset rules take effect immediately.
-    this.loadBuiltinPresets()
-
-    // Start watching for changes
     this.startWatch(dir)
 
     console.error(`[erdl-mcp] Loaded ${loaded} rules from ${dir}`)
     return loaded
   }
 
-  /**
-   * Load built-in preset rules from TypeScript source.
-   * These ship with the package, are updated on each release, and ALWAYS OVERRIDE
-   * any user-edited YAML versions of the same rules.
-   */
-  private loadBuiltinPresets(): void {
-    const presets = [...codingRules, ...engineeringRules, ...allWritingRules, ...designRules]
-    let added = 0
-    let updated = 0
-    let cleaned = 0
-
-    // Phase 1: Remove any YAML-loaded rules that share the same NAME as a built-in.
-    // This catches stale legacy IDs (e.g., "honesty_with_henry" from old YAML vs "EN-001" in new code).
-    const builtinNames = new Set(presets.map((r) => r.name))
-    for (const [id, rule] of this.rules) {
-      if (builtinNames.has(rule.name) && !presets.some((p) => p.id === id)) {
-        this.rules.delete(id)
-        cleaned++
-      }
-    }
-
-    // Phase 2: Insert/override all built-in presets
-    for (const rule of presets) {
-      const existing = this.rules.get(rule.id)
-      if (existing) {
-        this.rules.set(rule.id, rule)
-        updated++
-      } else {
-        this.rules.set(rule.id, rule)
-        added++
-      }
-    }
-
-    if (cleaned > 0) {
-      console.error(`[erdl-mcp] Cleaned ${cleaned} stale legacy rules (overridden by built-in presets)`)
-    }
-    console.error(`[erdl-mcp] Built-in presets: ${presets.length} (${added} new, ${updated} updated${cleaned > 0 ? ', ' + cleaned + ' stale cleaned' : ''})`)
-  }
-
   /** Reload all rules (called on file change) */
   reload(): number {
     this.rules.clear()
-    // Reload built-in presets first (they are always-active baseline)
-    this.loadBuiltinPresets()
-    // Then overlay user rules from filesystem
     const dir = RuleStore.getRulesDir()
     const count = this.loadFromDir(dir)
     console.error(`[erdl-mcp] Reloaded ${this.rules.size} rules (${count} from filesystem)`)
@@ -196,8 +122,7 @@ export class RuleStore {
   }
 
   /**
-   * Persist a rule to a YAML file.
-   * Creates a new file or updates existing.
+   * Persist a rule to a YAML file in SPEC §5 format.
    */
   async saveRule(rule: RuleDefinition): Promise<string> {
     const dir = RuleStore.getRulesDir()
@@ -206,30 +131,32 @@ export class RuleStore {
       fs.mkdirSync(categoryDir, { recursive: true })
     }
 
-    const filename = `${rule.id.toLowerCase().replace(/[^a-z0-9-]/g, '-')}.yaml`
+    const filename = `${rule.name.toLowerCase().replace(/[^a-z0-9-]/g, '-')}.yaml`
     const filePath = path.join(categoryDir, filename)
 
-    const yamlContent: YamlFile = {
-      rules: [this.ruleToYaml(rule)],
+    const specRule: Record<string, unknown> = {
+      name: rule.name,
+      description: rule.description,
+      priority: rule.priority,
+      when: this.conditionsToSpecWhen(rule.conditions),
+      then: rule.action.decision,
+      message: rule.action.reason ?? rule.action.instruction ?? rule.action.correction ?? '',
     }
 
-    const yamlStr = yaml.dump(yamlContent, {
-      indent: 2,
-      lineWidth: 120,
-      noRefs: true,
-    })
+    if (rule.version) specRule.version = rule.version
+    if (rule.enabled !== undefined && !rule.enabled) specRule.enabled = false
 
+    const yamlContent: YamlFile = { rules: [specRule] }
+    const yamlStr = yaml.dump(yamlContent, { indent: 2, lineWidth: 120, noRefs: true })
     fs.writeFileSync(filePath, yamlStr, 'utf-8')
     console.error(`[erdl-mcp] Rule saved: ${filePath}`)
 
-    // Add to in-memory store and trigger reload
     this.addRuntime(rule)
-
     return filePath
   }
 
   // ============================================
-  // Private methods
+  // Private: Load
   // ============================================
 
   private loadFromDir(dir: string): number {
@@ -239,31 +166,16 @@ export class RuleStore {
     for (const filePath of entries) {
       try {
         const content = fs.readFileSync(filePath, 'utf-8')
+        const parsed = yaml.load(content) as YamlFile | null
 
-        // Parse using a tolerant YAML reader (avoids js-yaml's strict indentation)
-        const parsed = this.parseYamlRaw(content)
+        if (!parsed?.rules || !Array.isArray(parsed.rules)) continue
 
-        if (!parsed?.rules) continue
-
-        // Spec v1.1 format: rules as keyed map { rule_name: { when, then, ... } }
-        if (typeof parsed.rules === 'object' && !Array.isArray(parsed.rules)) {
-          for (const [ruleId, ruleDef] of Object.entries(parsed.rules)) {
-            const rule = this.parseSpecRule(ruleId, ruleDef as Record<string, unknown>, filePath)
-            if (rule && !this.rules.has(rule.id)) {
-              this.rules.set(rule.id, rule)
-              count++
-            }
-          }
-        }
-
-        // Legacy format: rules as array
-        if (Array.isArray(parsed.rules)) {
-          for (const raw of parsed.rules) {
-            const rule = this.parseRule(raw, filePath)
-            if (rule && !this.rules.has(rule.id)) {
-              this.rules.set(rule.id, rule)
-              count++
-            }
+        for (const raw of parsed.rules) {
+          if (typeof raw !== 'object' || raw === null) continue
+          const rule = this.parseSpecRule(raw as Record<string, unknown>, filePath)
+          if (rule && !this.rules.has(rule.id)) {
+            this.rules.set(rule.id, rule)
+            count++
           }
         }
       } catch (err) {
@@ -284,7 +196,7 @@ export class RuleStore {
       const fullPath = path.join(dir, entry.name)
       if (entry.isDirectory()) {
         results.push(...this.scanYamlFiles(fullPath))
-      } else if (entry.name.endsWith('.yaml') || entry.name.endsWith('.yml')) {
+      } else if (entry.name.endsWith('.erdl.yaml') || entry.name.endsWith('.erdl.yml')) {
         results.push(fullPath)
       }
     }
@@ -292,232 +204,171 @@ export class RuleStore {
     return results
   }
 
+  // ============================================
+  // Private: SPEC §5 Parser
+  // ============================================
+
   /**
-   * Parse YAML content from .erdl.yaml files.
+   * Parse a single rule in ERDL SPEC §5 format.
    *
-   * Strategy: regex-tolerant parser for simplified ERDL format first
-   * (handles `then: ALLOW "message"` syntax that js-yaml rejects).
-   * Falls back to js-yaml for standard-compliant YAML with nested structures.
+   * rules:
+   *   - name: "dangerous-command-intercept"
+   *     description: "..."
+   *     priority: 10
+   *     override: high           # critical | high | normal | low
+   *     when:
+   *       logic: AND
+   *       conditions:
+   *         - field: "tool.name"
+   *           operator: eq
+   *           value: "exec"
+   *         - field: "tool.args.command"
+   *           operator: match
+   *           value: "(rm -rf|sudo)"
+   *     then: BLOCK
+   *     message: "Dangerous command intercepted"
    */
-  private parseYamlRaw(content: string): YamlFile | null {
-    // Primary: regex-based tolerant parser (handles ERDL simplified format)
-    const simpleResult = this.parseYamlSimple(content)
-    if (simpleResult) return simpleResult
-
-    // Fallback: js-yaml for standard YAML with nested structures
-    try {
-      const parsed = yaml.load(content) as YamlFile
-      if (parsed && (parsed.rules || parsed.agent || parsed.metadata)) {
-        return parsed
-      }
-    } catch {
-      // both failed
-    }
-
-    return null
-  }
-
-  /**
-   * Simplified regex-based YAML parser.
-   * Handles flat key-value rules within a `rules:` block.
-   * Does NOT support nested arrays/objects — those go through js-yaml.
-   */
-  private parseYamlSimple(content: string): YamlFile | null {
-    const result: YamlFile = { rules: {} as Record<string, unknown> }
-    const lines = content.split('\n')
-    let currentRule: Record<string, unknown> | null = null
-    let currentKey = ''
-    let currentValue = ''
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith('#')) continue
-
-      const ruleMatch = line.match(/^  (\w[\w-]*):$/)
-      if (ruleMatch && !line.startsWith('    ')) {
-        if (currentRule && currentRule.id) {
-          (result.rules as Record<string, unknown>)[currentRule.id as string] = currentRule
-        }
-        currentRule = { id: ruleMatch[1] }
-        currentKey = ''
-        currentValue = ''
-        continue
-      }
-
-      if (!currentRule) continue
-
-      const propMatch = line.match(/^    (\w+):\s*(.*)$/)
-      if (propMatch) {
-        if (currentKey && currentValue) {
-          currentRule[currentKey] = currentValue.trim()
-        }
-        currentKey = propMatch[1]
-        currentValue = propMatch[2] || ''
-        continue
-      }
-
-      if (currentKey && line.match(/^      \S/)) {
-        currentValue += ' ' + line.trim()
-        continue
-      }
-    }
-
-    if (currentRule && currentRule.id) {
-      if (currentKey && currentValue) {
-        currentRule[currentKey] = currentValue.trim()
-      }
-      (result.rules as Record<string, unknown>)[currentRule.id as string] = currentRule
-    }
-
-    const ruleKeys = Object.keys(result.rules as Record<string, unknown>)
-    return ruleKeys.length > 0 ? result : null
-  }
-
-  private parseRule(raw: YamlRule, sourceFile: string): RuleDefinition | null {
-    if (!raw.id || !raw.name) {
-      console.error(`[erdl-mcp] Skipping rule without id/name in ${sourceFile}`)
+  private parseSpecRule(raw: Record<string, unknown>, sourceFile: string): RuleDefinition | null {
+    const name = (raw.name as string) ?? ''
+    if (!name) return null
+    if (!raw.then) {
+      console.error(`[erdl-mcp] Skipping rule "${name}" without 'then' in ${sourceFile}`)
       return null
     }
 
-    const category = (raw.category as RuleCategory) ?? 'custom'
-    const conditions: RuleCondition[] = (raw.conditions ?? []).map((c) => ({
-      kind: (c.kind as RuleCondition['kind']) ?? 'intent_contains',
-      keywords: c.keywords,
-      pattern: c.pattern,
-      field: c.field,
-      value: c.value as string,
-    }))
+    // Infer category from parent directory name
+    const parentDir = path.basename(path.dirname(sourceFile))
+    const category = (raw.category as RuleCategory) ?? this.inferCategory(parentDir) ?? 'custom'
+    const description = (raw.description as string) ?? name
+    const priority = (raw.priority as number) ?? 100
+    const enabled = (raw.enabled as boolean) ?? true
 
-    const action: RuleAction = {
-      decision: (raw.action?.decision as RuleAction['decision']) ?? 'ALLOW',
-      instruction: raw.action?.instruction,
-      reason: raw.action?.reason,
+    // Parse override: SPEC §5 specifies critical|high|normal|low levels
+    const overrideRaw = raw.override
+    const override = overrideRaw === true || overrideRaw === 'true' ||
+      overrideRaw === 'critical' || overrideRaw === 'high'
+
+    // Parse when — supports both structured { logic, conditions } and legacy string expression
+    const whenObj = raw.when
+    const conditionLogic: 'AND' | 'OR' = (typeof whenObj === 'object' && whenObj !== null && (whenObj as Record<string,unknown>).logic === 'OR') ? 'OR' : 'AND'
+    const conditions: RuleCondition[] = this.parseWhen(whenObj)
+
+    // Parse then + message
+    const thenDecision = String(raw.then)
+    const message = (raw.message as string) ?? ''
+    const action = this.parseThenAction(thenDecision, message)
+
+    // Parse explanation / alternative (bilingual support)
+    if (raw.explanation) {
+      action.explanation = raw.explanation as string | { zh: string; en: string }
+    }
+    if (raw.alternative) {
+      action.alternative = raw.alternative as string | { zh: string; en: string }
     }
 
-    return {
-      id: raw.id,
-      name: raw.name,
-      description: raw.description ?? raw.name,
-      category,
-      triggers: raw.triggers ?? [],
-      conditions,
-      action,
-      priority: raw.priority ?? 100,
-      enabled: raw.enabled ?? true,
-      version: raw.version ?? 1,
-      hitCount: 0,
-    }
-  }
-
-  /**
-   * Parse a rule in ERDL Spec keyed-map format.
-   *
-   * rules:
-   *   no_any:
-   *     when: language = "typescript" AND output_text contains "any"
-   *     then: BLOCK "娑撳秷顩︽担璺ㄦ暏 any 缁鐎?
-   */
-  private parseSpecRule(ruleId: string, raw: Record<string, unknown>, _sourceFile: string): RuleDefinition | null {
-    if (!ruleId) return null
-
-    const category = (raw.category as RuleCategory) ?? 'custom'
-    const description = (raw.description as string) ?? ruleId
-    const whenExpr = (raw.when as string) ?? ''
-    const thenExpr = (raw.then as string) ?? ''
-
-    // Parse when 閳?conditions[]
-    const conditions: RuleCondition[] = this.parseWhenExpression(whenExpr)
-
-    // Parse then 閳?action
-    const action = this.parseThenExpression(thenExpr)
+    const id = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase()
 
     return {
-      id: ruleId,
-      name: ruleId,
+      id,
+      name,
       description,
       category,
-      triggers: [ruleId],
       conditions,
+      conditionLogic,
       action,
-      priority: (raw.priority as number) ?? 100,
-      enabled: (raw.enabled as boolean) ?? true,
-      override: (raw.override as boolean) ?? false,
+      priority,
+      enabled,
+      override,
       version: (raw.version as number) ?? 1,
       hitCount: 0,
     }
   }
 
   /**
-   * Parse when expression 閳?RuleCondition[]
+   * Parse SPEC §5 when into RuleCondition[].
    *
-   * Supports ERDL Spec operators + extensions:
-   *   field = "value" | field != "value" | field in ("a","b")
-   *   field contains "val" | field match "regex"
-   *   AND / OR / NOT logic with () grouping
+   * Supports:
+   *   when: { logic: AND, conditions: [{ field, operator, value }] }   — SPEC §5 structured
+   *   when: "true"                                                     — always match (empty = advisory)
+   *   when: "tool.name = \"exec\" AND tool.args.command match \"rm\""   — legacy string expr (no longer used)
    */
-  private parseWhenExpression(expr: string): RuleCondition[] {
-    if (!expr || expr === 'true') return []
+  private parseWhen(whenObj: unknown): RuleCondition[] {
+    // Empty / null / "true" → always match (advisory rule)
+    if (whenObj === undefined || whenObj === null || whenObj === 'true') return []
 
-    try {
-      const ast = compileWhen(expr)
-      if (ast.conditions && Array.isArray(ast.conditions)) {
-        return (ast.conditions as unknown as Array<Record<string, unknown>>).map((c) => ({
+    // Structured SPEC §5 format: { logic, conditions: [...] }
+    if (typeof whenObj === 'object' && !Array.isArray(whenObj)) {
+      const w = whenObj as Record<string, unknown>
+      const conds = w.conditions as Array<Record<string, unknown>> | undefined
+      if (conds && Array.isArray(conds)) {
+        return conds.map((c) => ({
           kind: 'context_matches' as const,
-          field: c.field as string ?? '',
-          value: c.value,
-          operator: mapSpecOp(c.operator as string),
+          field: (c.field as string) ?? '',
+          operator: (c.operator as ConditionOperator) ?? 'eq',
+          value: c.value as string | number | boolean | string[] | undefined,
         }))
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`[erdl-mcp] Failed to compile when expression: "${expr}" — error: ${msg}. Rule will use empty conditions (always matches). Check YAML syntax.`)
+      // { logic: AND, conditions: [...] } with empty conditions → always match
+      return []
     }
 
     return []
   }
 
-  private parseThenExpression(expr: string): RuleAction {
-    if (!expr) return { decision: 'ALLOW' }
-    const upper = expr.toUpperCase()
-    if (upper.startsWith('BLOCK') || upper.startsWith('DENY')) {
-      const reason = expr.replace(/^(BLOCK|DENY)\s*/i, '').replace(/^["']|["']$/g, '').trim()
-      return { decision: 'DENY', reason: reason || 'Blocked by rule' }
+  /**
+   * Parse then + message into RuleAction.
+   *
+   * SPEC §5 then values: ALLOW | CORRECT | STRATEGIZE | AUDIT | BLOCK | DENY
+   *                      | REQUEST_HUMAN | ESCALATE | EMERGENCY_HALT | VALIDATE | NOTIFY
+   */
+  private parseThenAction(decision: string, message: string): RuleAction {
+    const upper = decision.toUpperCase()
+
+    switch (upper) {
+      case 'DENY':
+      case 'BLOCK':  // SPEC §3.4 alias: BLOCK is the standard name, DENY is the synonym
+        return { decision: 'DENY', reason: message || 'Blocked by rule', ring: 0 }
+      case 'EMERGENCY_HALT':
+        return { decision: 'EMERGENCY_HALT', reason: message || 'Emergency halt', ring: 0 }
+      case 'REQUEST_HUMAN':
+        return { decision: 'REQUEST_HUMAN', reason: message || 'Approval required', ring: 2 }
+      case 'CORRECT':
+        return { decision: 'CORRECT', correction: message || undefined }
+      case 'ALLOW':
+      default:
+        return { decision: 'ALLOW', instruction: message || undefined }
     }
-    if (upper.startsWith('EMERGENCY_HALT')) {
-      const reason = expr.replace(/^EMERGENCY_HALT\s*/i, '').replace(/^["']|["']$/g, '').trim()
-      return { decision: 'EMERGENCY_HALT', reason: reason || 'Emergency halt', ring: 0 }
-    }
-    if (upper.startsWith('REQUEST_HUMAN')) {
-      const reason = expr.replace(/^REQUEST_HUMAN\s*/i, '').replace(/^["']|["']$/g, '').trim()
-      return { decision: 'REQUEST_HUMAN', reason: reason || 'Approval required' }
-    }
-    if (upper.startsWith('CORRECT')) {
-      const correction = expr.replace(/^CORRECT\s*/i, '').replace(/^["']|["']$/g, '').trim()
-      return { decision: 'CORRECT', correction: correction || undefined }
-    }
-    if (upper.startsWith('ALLOW') || upper.startsWith('SUGGEST')) {
-      const instruction = expr.replace(/^(ALLOW|SUGGEST)\s*/i, '').replace(/^["']|["']$/g, '').trim()
-      return { decision: 'ALLOW', instruction: instruction || undefined }
-    }
-    return { decision: 'ALLOW', instruction: expr || undefined }
   }
 
-  private ruleToYaml(rule: RuleDefinition): YamlRule {
+  /** Convert conditions array back to SPEC §5 when structure (for save) */
+  private conditionsToSpecWhen(conditions: RuleCondition[]): Record<string, unknown> | string {
+    if (conditions.length === 0) return 'true'
+
     return {
-      id: rule.id,
-      name: rule.name,
-      description: rule.description,
-      category: rule.category,
-      triggers: rule.triggers,
-      conditions: rule.conditions,
-      action: rule.action,
-      priority: rule.priority,
-      enabled: rule.enabled,
-      version: rule.version,
+      logic: 'AND',
+      conditions: conditions.map((c) => {
+        const entry: Record<string, unknown> = {
+          field: c.field ?? '',
+          operator: c.operator ?? 'eq',
+          value: c.value,
+        }
+        return entry
+      }),
     }
   }
+
+  /** Infer rule category from directory name */
+  private inferCategory(dirName: string): RuleCategory | null {
+    const valid: RuleCategory[] = [
+      'coding', 'engineering', 'security', 'writing', 'design',
+      'performance', 'testing', 'compliance', 'accessibility', 'custom',
+    ]
+    return valid.includes(dirName as RuleCategory) ? (dirName as RuleCategory) : null
+  }
+
+  // ============================================
+  // Private: File Watch
+  // ============================================
 
   private watchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -525,7 +376,6 @@ export class RuleStore {
     try {
       this.watcher = fs.watch(dir, { recursive: true }, (_event, filename) => {
         if (filename && (filename.endsWith('.yaml') || filename.endsWith('.yml'))) {
-          // Proper debounce: clear previous timer before setting new one
           if (this.watchTimer) clearTimeout(this.watchTimer)
           this.watchTimer = setTimeout(() => {
             this.watchTimer = null
@@ -549,25 +399,3 @@ export class RuleStore {
 
 /** Singleton instance */
 export const ruleStore = new RuleStore()
-
-// ============================================
-// Helper functions
-// ============================================
-
-
-function mapSpecOp(op: string): ConditionOperator {
-  const map: Record<string, ConditionOperator> = {
-    '=': 'eq', '==': 'eq', 'eq': 'eq',
-    '!=': 'ne', '<>': 'ne', 'ne': 'ne',
-    '>': 'gt', 'gt': 'gt',
-    '<': 'lt', 'lt': 'lt',
-    '>=': 'gte', 'gte': 'gte',
-    '<=': 'lte', 'lte': 'lte',
-    'in': 'in', 'not_in': 'not_in',
-    'contains': 'contains', 'not_contains': 'not_contains',
-    'match': 'match',
-    'exists': 'exists', 'not_exists': 'not_exists',
-  }
-  return map[op] ?? 'eq'
-}
-

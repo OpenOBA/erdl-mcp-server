@@ -1,0 +1,22 @@
+# ERDL Rule — DOC VERSION ALIGNMENT
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "doc_version_alignment"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "doc_version_alignment"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: CORRECT
+    message: "文档版本和代码版本同步更新。代码改完文档不更新 = 没交付。"

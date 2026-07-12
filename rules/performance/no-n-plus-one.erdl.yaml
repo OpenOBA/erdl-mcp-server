@@ -1,0 +1,25 @@
+# ERDL Rule — NO_N_PLUS_ONE
+# Category: performance
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_n_plus_one"
+  description: "防止 N+1 查询"
+  tags: [performance]
+
+rules:
+  - name: "no_n_plus_one"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: 'for\s*\(|forEach|map\('
+    then: CORRECT
+    message: "循环内不要做数据库查询。用 JOIN 或批量查询避免 N+1。"

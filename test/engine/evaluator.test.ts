@@ -237,7 +237,7 @@ describe('Evaluator (Tool Call Guard mode)', () => {
   // ============================================
 
   describe('override semantics', () => {
-    it('override rule can relax a DENY to ALLOW', () => {
+    it('override rule after DENY is never reached — DENY always wins first match', () => {
       const rules: RuleDefinition[] = [
         makeRule({
           id: 'BLOCK_ALL_EXEC',
@@ -253,13 +253,14 @@ describe('Evaluator (Tool Call Guard mode)', () => {
           action: { decision: 'ALLOW', instruction: 'safe exec allowed' },
         }),
       ]
-      // exec with 'ls' matches BLOCK_ALL_EXEC first (DENY), then ALLOW_SAFE_EXEC overrides
+      // BLOCK_ALL_EXEC (p10) matches first → DENY, evaluation stops.
+      // ALLOW_SAFE_EXEC (p50, override) is never reached.
       const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'ls -la' }))
-      expect(result.decision).toBe('ALLOW')
-      expect(result.primaryInstruction).toBe('safe exec allowed')
+      expect(result.decision).toBe('DENY')
+      expect(result.primaryReason).toBe('exec blocked by default')
     })
 
-    it('override is NOT allowed in unsafe direction (ALLOW → DENY)', () => {
+    it('later DENY rule always wins over earlier ALLOW rule', () => {
       const rules: RuleDefinition[] = [
         makeRule({
           id: 'ALLOW_ALL',
@@ -268,17 +269,17 @@ describe('Evaluator (Tool Call Guard mode)', () => {
           action: { decision: 'ALLOW', instruction: 'allowed' },
         }),
         makeRule({
-          id: 'BLOCK_OVERRIDE',
+          id: 'BLOCK_RM',
           priority: 50,
           override: true,
           conditions: [{ kind: 'context_matches', field: 'tool.args.command', operator: 'contains', value: 'rm' }],
-          action: { decision: 'DENY', reason: 'trying to block via override' },
+          action: { decision: 'DENY', reason: 'rm is dangerous' },
         }),
       ]
-      // ALLOW_ALL matches first. BLOCK_OVERRIDE tries to override to DENY → REJECTED
+      // ALLOW_ALL (p10) matches first → ALLOW, continues. BLOCK_RM (p50) also matches → DENY wins.
       const result = evaluator.evaluate(rules, guardCtx('exec', { command: 'rm -rf /' }))
-      expect(result.decision).toBe('ALLOW')
-      expect(result.primaryInstruction).toBe('allowed')
+      expect(result.decision).toBe('DENY')
+      expect(result.primaryReason).toBe('rm is dangerous')
     })
 
     it('override rule without match does not change outcome', () => {

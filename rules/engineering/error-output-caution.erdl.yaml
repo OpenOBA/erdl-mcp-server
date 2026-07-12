@@ -1,0 +1,22 @@
+# ERDL Rule — ERROR OUTPUT CAUTION
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "error_output_caution"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "error_output_caution"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: CORRECT
+    message: "错误信息不泄露内部路径、堆栈、密码。生产用错误ID方案，开发可详细。"

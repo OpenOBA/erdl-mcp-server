@@ -1,0 +1,22 @@
+# ERDL Rule — SECURITY_HEADERS
+# Category: security
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "security_headers"
+  description: "安全 Header 提醒"
+  tags: [security]
+
+rules:
+  - name: "security_headers"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: ALLOW
+    message: "响应含安全 Header：CSP, X-Content-Type-Options, X-Frame-Options, HSTS。"

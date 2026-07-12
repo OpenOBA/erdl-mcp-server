@@ -1,0 +1,22 @@
+# ERDL Rule — NO SHORTCUT
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_shortcut"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "no_shortcut"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: CORRECT
+    message: "不寻求临时方案。路径不写死，兼容复杂用户环境。从根本解决问题。"

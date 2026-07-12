@@ -107,7 +107,6 @@ export async function createRuleHandler(args: {
     name,
     description: args.naturalLanguage,
     category,
-    triggers: args.triggers ?? [],
     conditions: args.keywords && args.keywords.length > 0
       ? [
           {

@@ -1,0 +1,25 @@
+# ERDL Rule — CONFIRM_DEPENDENCIES
+# Category: coding
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "confirm_dependencies"
+  description: "依赖确认提醒"
+  tags: [coding]
+
+rules:
+  - name: "confirm_dependencies"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: "npm install|yarn add|pnpm add|pip install"
+    then: ALLOW
+    message: "添加新依赖前确认：项目是否已有类似包？"

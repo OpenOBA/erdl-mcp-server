@@ -1,0 +1,22 @@
+# ERDL Rule — PIPELINE BEFORE PUSH
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "pipeline_before_push"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "pipeline_before_push"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: eq
+          value: "exec"
+    then: ALLOW
+    message: "推送前质量门禁：typecheck → build → test。任一步失败就停止推送，先修再推。"

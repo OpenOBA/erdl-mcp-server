@@ -1,0 +1,25 @@
+# ERDL Rule — STRUCTURED_LOGGING
+# Category: observability
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "structured_logging"
+  description: "结构化日志"
+  tags: [observability]
+
+rules:
+  - name: "structured_logging"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: 'console\.log|winston|pino|logger'
+    then: CORRECT
+    message: "用结构化日志（JSON），含 timestamp/level/message/context。不用纯文本。"

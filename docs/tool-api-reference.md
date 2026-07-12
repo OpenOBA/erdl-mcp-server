@@ -102,7 +102,7 @@ Create a new rule from natural language and save to `~/.openoba/rules/`.
   "ruleId": "CO-001",
   "name": "Never use TypeScript any type",
   "status": "created",
-  "filePath": "~/.openoba/rules/coding/co-001.yaml"
+  "filePath": "~/.openoba/rules/coding/co-001.erdl.yaml"
 }
 ```
 
@@ -188,39 +188,42 @@ Rules are stored as YAML in `~/.openoba/rules/`. The directory is organized by c
 ```
 ~/.openoba/rules/
 ├── coding/
-│   ├── openoba-presets.yaml
-│   └── my-custom.yaml
+│   ├── no-any.erdl.yaml
+│   └── my-custom.erdl.yaml
 ├── writing/
-│   └── openoba-presets.yaml
+│   └── no-cliche.erdl.yaml
 ├── design/
-│   └── openoba-presets.yaml
+│   └── tailwind-first.erdl.yaml
 └── custom/
-    └── anything.yaml
+    └── anything.erdl.yaml
 ```
 
-### YAML Schema
+### YAML Schema (ERDL SPEC §5)
 
 ```yaml
+protocol: "erdl/v1"
+version: "1.0.0"
+
 rules:
-  - id: MY-001                          # Required: unique rule ID
-    name: My custom rule                # Required: human-readable name
-    description: What this rule does    # Required: one-line description
-    category: custom                    # coding | writing | design | custom
-    triggers: [write_code, output_code] # Optional: intent triggers
-    conditions:
-      - kind: intent_contains           # intent_contains | intent_matches | context_matches
-        keywords: [typescript, function] # For intent_contains
-    action:
-      decision: ALLOW                   # ALLOW | DENY
-      instruction: Always handle errors. # For ALLOW: what to do
-      reason: This is not allowed.      # For DENY: why blocked
-    priority: 10                        # Lower = higher priority (1-1000)
-    enabled: true
-    version: 1
+  - name: "no_console_log"            # Required: unique rule name
+    description: "Description here"    # Required: one-line description
+    priority: 10                       # Lower = higher priority (1-1000)
+    override: high                     # Optional: critical|high|normal|low
+    when:
+      logic: AND                       # AND | OR
+      conditions:
+        - field: "tool.name"           # Field to check
+          operator: eq                 # eq|ne|gt|gte|lt|lte|in|contains|match|exists
+          value: "exec"               # Value to compare
+        - field: "tool.args.command"
+          operator: match
+          value: "pattern"
+    then: DENY                         # ALLOW|CORRECT|DENY|REQUEST_HUMAN|EMERGENCY_HALT
+    message: "Explanation message"
 ```
 
 Rules reload automatically on file save — no restart needed.
 
 ---
 
-> 唐浩然 · OpenOBA AI 执行官 · 2026-07-07
+> OpenOBA · ERDL MCP Server · 2026-07-12

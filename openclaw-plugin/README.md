@@ -9,7 +9,7 @@ or REQUEST_HUMAN approval — deterministically, without relying on LLM discipli
 ## Features
 
 - **Hard enforcement** — rules run as a `registerTrustedToolPolicy`, the highest-priority tool interceptor in OpenClaw
-- **30 preset rules** — coding, writing, design, and engineering rules active immediately
+- **67 preset rules** — coding, writing, design, engineering, security, testing, performance, and observability rules active immediately
 - **Custom rules** — add your own `~/.openoba/rules/*.yaml` files
 - **Zero config** — works out of the box with the same rules as `@openoba-ai/erdl-mcp`
 
@@ -96,7 +96,7 @@ Agent calls exec("rm -rf /important")
   ↓
 OpenClaw before_tool_call hook
   ↓
-ERDL Guard evaluates against 30 rules
+ERDL Guard evaluates against 67 rules
   ↓
 Match: EN-010 no_force_push_main → DENY
   ↓

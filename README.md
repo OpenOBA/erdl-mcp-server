@@ -7,7 +7,7 @@
 [![license](https://img.shields.io/npm/l/@openoba-ai/erdl-mcp)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
 [![tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
 
-ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 built-in presets. Unlimited personal rules. **Free forever.**
+ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 67 built-in rules across 8 categories. Unlimited personal rules. **Free forever.**
 
 ---
 
@@ -25,14 +25,14 @@ ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 
 ## Quick Start
 
 ```bash
-# Start MCP Server (5 tools, 30 presets — all MCP clients)
+# Start MCP Server (5 tools, 67 rules — all MCP clients)
 npx -y @openoba-ai/erdl-mcp
 
 # Or: install OpenClaw Plugin for hardware enforcement
 openclaw plugins install @openoba-ai/erdl-openclaw
 ```
 
-30 rules active immediately. No account. No configuration. No API key.
+67 rules active immediately. No account. No configuration. No API key.
 
 **中文用户：**
 ```bash
@@ -46,7 +46,7 @@ npx -y @openoba-ai/erdl-mcp --lang zh
 | | Free | Pro |
 |------|:---:|:---:|
 | 5 MCP Tools | ✅ | ✅ |
-| 30 Preset Rules | ✅ | ✅ |
+| 67 Preset Rules | ✅ | ✅ |
 | Unlimited Personal Rules | ✅ | ✅ |
 | Chinese / English | ✅ | ✅ |
 | All 11 Operators | ✅ | ✅ |
@@ -90,14 +90,18 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 
 ## What's Included
 
-### 30 Built-in Rules
+### 67 Built-in Rules (8 Categories)
 
 | Category | Rules | Scope |
 |----------|:-----:|-------|
 | `coding` | 10 | TypeScript quality, Git discipline, dependency hygiene |
-| `engineering` | 10 | Workflow discipline: honesty, no shortcuts, pipeline gates |
+| `engineering` | 24 | Workflow discipline, pipeline gates, session memory, self-verify |
 | `writing` | 7 | Tone, formatting, clarity |
 | `design` | 3 | Tailwind-first, responsive, accessible |
+| `security` | 6 | SQL injection, eval, hardcoded secrets, input validation |
+| `testing` | 11 | Coverage, boundary conditions, flaky tests, TDD workflow |
+| `performance` | 3 | N+1 queries, pagination, measure before optimize |
+| `observability` | 3 | Structured logging, health checks, no secrets in logs |
 
 ### 5 MCP Tools
 
@@ -178,19 +182,27 @@ You: "Why did you reject my code?"
 Agent: erdl_explain → shows every rule that fired
 ```
 
-Or create rules manually in `~/.openoba/rules/`:
+Or create rules manually in `~/.openoba/rules/` (ERDL SPEC §5 format):
 
 ```yaml
+protocol: "erdl/v1"
+version: "1.0.0"
+
 rules:
-  - id: MY-001
-    name: no_console_log
-    description: Don't commit console.log statements
-    category: coding
-    triggers: [write_file, edit, apply_patch]
-    when: "tool.args.path match \"\\.tsx?$\""
-    then: DENY "Remove console.log before committing"
+  - name: "no_console_log"
+    description: "Don't commit console.log statements"
     priority: 10
-    enabled: true
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: "console\\.log"
+    then: DENY
+    message: "Remove console.log before committing"
 ```
 
 [📚 Full tutorial: Create Your First ERDL Rule →](./docs/tutorial-create-rules.md) ([English](./docs/tutorial-create-rules.en.md))

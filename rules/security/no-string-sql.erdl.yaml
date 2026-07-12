@@ -1,0 +1,26 @@
+# ERDL Rule — NO_STRING_SQL
+# Category: security
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_string_sql"
+  description: "拦截 SQL 字符串拼接"
+  tags: [security]
+
+rules:
+  - name: "no_string_sql"
+    priority: 3
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: '(SELECT|INSERT|UPDATE|DELETE)\s.*\+\s'
+    then: DENY
+    override: critical
+    message: "禁止字符串拼接构造 SQL。使用参数化查询或 ORM。"

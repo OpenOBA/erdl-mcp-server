@@ -1,0 +1,22 @@
+# ERDL Rule — NO SINGLE TASK TUNNEL
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_single_task_tunnel"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "no_single_task_tunnel"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: CORRECT
+    message: "不为一任务破坏全局一致性。站在产品、架构、用户体验高度考虑影响。"

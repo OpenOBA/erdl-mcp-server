@@ -1,0 +1,26 @@
+# ERDL Rule — NO_STASH
+# Category: engineering
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_stash"
+  description: "拦截 git stash 操作"
+  tags: [engineering]
+
+rules:
+  - name: "no_stash"
+    priority: 4
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: eq
+          value: "exec"
+        - field: "tool.args.command"
+          operator: match
+          value: "git stash"
+    then: DENY
+    override: high
+    message: "禁止 git stash 累积。所有变更必须入 commit。"

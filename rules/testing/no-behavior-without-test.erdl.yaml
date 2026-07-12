@@ -1,0 +1,25 @@
+# ERDL Rule — NO_BEHAVIOR_WITHOUT_TEST
+# Category: testing
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_behavior_without_test"
+  description: "行为必须有测试"
+  tags: [testing]
+
+rules:
+  - name: "no_behavior_without_test"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: "test|spec|expect|assert"
+    then: CORRECT
+    message: "每个功能/修复/重构都应有对应测试。先写测试再写实现。"

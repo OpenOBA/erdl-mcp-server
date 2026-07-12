@@ -1,0 +1,25 @@
+# ERDL Rule — BOUNDARY_CONDITIONS_REQUIRED
+# Category: testing
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "boundary_conditions_required"
+  description: "边界条件测试"
+  tags: [testing]
+
+rules:
+  - name: "boundary_conditions_required"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: "test|spec|expect|assert"
+    then: CORRECT
+    message: "测试必须覆盖边界条件：null/undefined/空字符串/0/负数/极大值。"

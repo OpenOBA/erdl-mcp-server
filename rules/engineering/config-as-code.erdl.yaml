@@ -1,0 +1,22 @@
+# ERDL Rule — CONFIG AS CODE
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "config_as_code"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "config_as_code"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: CORRECT
+    message: "配置和代码同仓库、同commit、同review。不单独维护，不写在wiki里。"

@@ -63,4 +63,4 @@ For precise geographic data, we use **npm download statistics** — which npm pr
 
 ---
 
-> © 2026 OpenOBA · 深圳市秒镜科技有限公司
+> © 2026 OpenOBA

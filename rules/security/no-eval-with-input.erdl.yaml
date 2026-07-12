@@ -1,0 +1,26 @@
+# ERDL Rule — NO_EVAL_WITH_INPUT
+# Category: security
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "no_eval_with_input"
+  description: "拦截 eval/Function/setTimeout 处理输入"
+  tags: [security]
+
+rules:
+  - name: "no_eval_with_input"
+    priority: 3
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+        - field: "tool.args"
+          operator: match
+          value: '(eval\s*\(|new\s+Function\s*\(|setTimeout\s*\(|setInterval\s*\()'
+    then: DENY
+    override: critical
+    message: "禁止 eval()/new Function()/setTimeout(string)。远程代码执行风险。"

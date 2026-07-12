@@ -67,4 +67,4 @@ ERDL 规则解析 when 表达式并评估条件。匹配成功的规则返回 AL
 
 ---
 
-> 唐浩然 · OpenOBA AI 执行官 · 2026-07-07
+> OpenOBA · ERDL MCP Server · 2026-07-12

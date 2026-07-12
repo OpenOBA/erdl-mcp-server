@@ -2,11 +2,33 @@
 
 All notable changes to ERDL MCP Server will be documented in this file.
 
-## [1.1.0] — 2026-07-11
+## [1.1.0] — 2026-07-12
+
+### Changed
+- **SPEC §5 compliance overhaul**: rule files migrated from `when: "true"` to structured `when: { logic, conditions }` format
+- 67 rules now distributed across 8 categories (coding, design, engineering, security, testing, performance, observability, writing)
+- All 67 rules have meaningful bilingual messages — 0 placeholder messages
+
+### Removed
+- Community rules (14 packs) — non-SPEC format, removed
+- TS presets (515 lines in `src/presets/`) — all migrated to YAML SPEC §5 files
+- `parseRule()`, `parseYamlSimple()`, `loadBuiltinPresets()` — dead code removed
+
+### Fixed
+- Evaluator: `match`/`contains` on object values now uses deep search (was `[object Object]`)
+- Evaluator: `conditionLogic` (AND/OR) from SPEC §5 YAML now parsed and respected
+- Evaluator: override rules restored — all rules evaluated in one loop, override short-circuits
+- All private/internal references scrubbed from rule messages (names, file paths, etc.)
+
+### Added
+- `conditionLogic` field in `RuleDefinition` (AND | OR)
+- `deepMatch()` / `deepContains()` for recursive object value search
+
+## [1.0.1] — 2026-07-11
 
 ### Added
 - **@openoba-ai/erdl-openclaw** — OpenClaw Plugin with `registerTrustedToolPolicy` for hard tool call interception
-- **30 rules v2**: every rule now has bilingual explanation (zh + en) and DENY rules have alternative suggestions
+- **Rules v2**: every rule now has bilingual explanation (zh + en) and DENY rules have alternative suggestions
 - `explanation` and `alternative` fields in `RuleAction`, `RuleMatch`, `EvaluationResult`
 - `after_tool_call` friendly feedback injection via `registerAgentToolResultMiddleware`
 - ERDL Plugin coexists with ERDL MCP Server on the same OpenClaw instance
@@ -36,7 +58,7 @@ All notable changes to ERDL MCP Server will be documented in this file.
 - README rewritten: simplified, Free/Pro split, removed MCP platform status table and roadmap
 - Version bumped from beta.9 → 1.0.0 (first public release)
 - package.json repository URL corrected to `OpenOBA/erdl-mcp-server`
-- Removed reference to `openoba-starter` in test file header
+- Removed internal project references from test file headers
 
 ### Removed
 - MCP platform "Coming soon" table (will re-add when listings are live)

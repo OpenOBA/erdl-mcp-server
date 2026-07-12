@@ -21,26 +21,6 @@ import { SafeExpr } from './safe-expr.js'
 
 const safeExpr = new SafeExpr()
 
-/** Safety severity: lower number = more restrictive */
-const DECISION_SEVERITY: Record<string, number> = {
-  EMERGENCY_HALT: 0,
-  DENY: 1,
-  REQUEST_HUMAN: 2,
-  CORRECT: 3,
-  ALLOW: 4,
-  PASS: 5,
-}
-
-/**
- * override is only permitted in the safe direction:
- * BLOCK/DENY/HALT → ALLOW is safe (override relaxes).
- * ALLOW → DENY is NOT override; it's already handled by Ring ordering.
- */
-function isOverrideSafe(from: Decision, to: Decision): boolean {
-  // override only moves from more restrictive → less restrictive
-  return DECISION_SEVERITY[to] > DECISION_SEVERITY[from]
-}
-
 export class Evaluator {
   evaluate(
     rules: RuleDefinition[],
@@ -73,16 +53,13 @@ export class Evaluator {
     for (const ring of ringKeys) {
       const ringRules = byRing.get(ring)!
 
-      // Separate override and normal rules
-      const overrideRules = ringRules.filter((r) => r.override)
-      const normalRules = ringRules.filter((r) => !r.override)
-
-      // Phase 1: Evaluate normal rules. ALLOW rules accumulate (inject instructions).
-      // DENY/HALT stop immediately — safety wins over advisories.
-      // REQUEST_HUMAN/CORRECT also keep evaluating — a later DENY should still win.
-      for (const rule of normalRules.sort((a, b) => a.priority - b.priority)) {
+      // Evaluate all rules in priority order.
+      // override=true rules short-circuit further evaluation on match (SPEC §4.4).
+      for (const rule of ringRules.sort((a, b) => a.priority - b.priority)) {
         const matched = rule.conditions.length === 0 ||
-          rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
+          (rule.conditionLogic === 'OR'
+            ? rule.conditions.some((cond) => this.evaluateLeaf(cond, context))
+            : rule.conditions.every((cond) => this.evaluateLeaf(cond, context)))
         if (!matched) continue
 
         const match = this.makeMatch(rule, ring as RingLevel)
@@ -130,29 +107,10 @@ export class Evaluator {
           }
         }
 
-        break // DENY/HALT stops evaluation in this ring. ALLOW/REQUEST_HUMAN/CORRECT already continued above.
-      }
+        // For guard rules with override: short-circuit (don't keep evaluating this ring)
+        if (rule.override) break
 
-      // Phase 2: Evaluate override rules AFTER normal rules have produced a decision.
-      // Override rules can only relax (BLOCK/DENY → ALLOW), never tighten.
-      // Override rules without a prior decision are skipped (they patch, not decide).
-      if (finalDecision !== 'PASS') {
-        for (const rule of overrideRules.sort((a, b) => a.priority - b.priority)) {
-          const matched = rule.conditions.length === 0 ||
-            rule.conditions.every((cond) => this.evaluateLeaf(cond, context))
-          if (!matched) continue
-
-          const match = this.makeMatch(rule, ring as RingLevel)
-
-          if (isOverrideSafe(finalDecision, match.decision)) {
-            allMatched.push(match)
-            finalDecision = match.decision
-            finalReason = match.reason
-            finalInstruction = match.instruction
-            finalCorrection = match.correction
-          }
-          // unsafe override → silently ignored, rule is recorded as skipped
-        }
+        break // DENY/HALT stops evaluation in this ring
       }
     }
 
@@ -209,51 +167,10 @@ export class Evaluator {
   }
 
   // ============================================
-  // Leaf condition evaluation (dual mode)
+  // SPEC §5: field/operator/value evaluation
   // ============================================
 
   private evaluateLeaf(cond: RuleCondition, context: Record<string, unknown>): boolean {
-    // --- Spec v1.1 mode: field + operator + value ---
-    if (cond.field && cond.operator) {
-      return this.evaluateSpec(cond, context)
-    }
-
-    // --- Legacy intent_contains ---
-    if (cond.kind === 'intent_contains') {
-      const intent = String(context.intent ?? '').toLowerCase()
-      return (cond.keywords ?? []).some((kw) => intent.includes(kw.toLowerCase()))
-    }
-
-    // --- Legacy intent_matches ---
-    if (cond.kind === 'intent_matches') {
-      if (!cond.pattern) return false
-      // ReDoS protection: reject patterns with nested quantifiers
-      if (/[(][^)]*[+*][^)]*[+*]/.test(cond.pattern)) {
-        console.error(`[erdl-mcp] ReDoS risk: rejecting pattern "${cond.pattern}"`)
-        return false
-      }
-      try {
-        return new RegExp(cond.pattern, 'i').test(String(context.intent ?? ''))
-      } catch {
-        return false
-      }
-    }
-
-    // --- Legacy context_matches ---
-    if (cond.kind === 'context_matches') {
-      if (!cond.field || !cond.value) return false
-      const fieldVal = String(this.resolveField(cond.field, context) ?? '')
-      return fieldVal.toLowerCase().includes(String(cond.value).toLowerCase())
-    }
-
-    return false
-  }
-
-  // ============================================
-  // Spec v1.1: field/operator/value evaluation
-  // ============================================
-
-  private evaluateSpec(cond: RuleCondition, context: Record<string, unknown>): boolean {
     const { field, operator } = cond
     if (!field || !operator) return false
 
@@ -290,14 +207,27 @@ export class Evaluator {
       case 'not_in':
         return Array.isArray(cond.value) && !(cond.value as unknown[]).includes(raw)
       case 'contains': {
-        return String(raw ?? '').includes(String(cond.value))
+        const search = String(cond.value)
+        if (typeof raw === 'object' && raw !== null) {
+          return this.deepContains(raw as Record<string, unknown>, search)
+        }
+        return String(raw ?? '').includes(search)
       }
       case 'not_contains': {
-        return !String(raw ?? '').includes(String(cond.value))
+        const search = String(cond.value)
+        if (typeof raw === 'object' && raw !== null) {
+          return !this.deepContains(raw as Record<string, unknown>, search)
+        }
+        return !String(raw ?? '').includes(search)
       }
       case 'match': {
         try {
-          return new RegExp(cond.value as string).test(String(raw ?? ''))
+          const re = new RegExp(cond.value as string)
+          // When matching against a complex object, recursively search all string values
+          if (typeof raw === 'object' && raw !== null) {
+            return this.deepMatch(raw as Record<string, unknown>, re)
+          }
+          return re.test(String(raw ?? ''))
         } catch {
           return false
         }
@@ -306,6 +236,30 @@ export class Evaluator {
       case 'not_exists': return raw === undefined || raw === null
       default: return false
     }
+  }
+
+  /** Recursively search all string values in an object for a regex match */
+  private deepMatch(obj: Record<string, unknown>, re: RegExp): boolean {
+    for (const v of Object.values(obj)) {
+      if (typeof v === 'string') {
+        if (re.test(v)) return true
+      } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+        if (this.deepMatch(v as Record<string, unknown>, re)) return true
+      }
+    }
+    return false
+  }
+
+  /** Recursively search all string values in an object for a substring */
+  private deepContains(obj: Record<string, unknown>, search: string): boolean {
+    for (const v of Object.values(obj)) {
+      if (typeof v === 'string') {
+        if (v.includes(search)) return true
+      } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+        if (this.deepContains(v as Record<string, unknown>, search)) return true
+      }
+    }
+    return false
   }
 
   private resolveField(field: string, context: Record<string, unknown>): unknown {

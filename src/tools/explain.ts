@@ -76,18 +76,10 @@ export async function explainHandler(args: {
     let conditionDetail = ''
     if (rule.conditions.length > 0) {
       const cond = rule.conditions[0]
-      switch (cond.kind) {
-        case 'context_matches':
-          conditionDetail = `context.${cond.field ?? ''} ${cond.operator ?? 'contains'} "${cond.value ?? ''}"`
-          break
-        case 'intent_contains':
-          conditionDetail = `legacy intent_contains: [${(cond.keywords ?? []).join(', ')}]`
-          break
-        case 'intent_matches':
-          conditionDetail = `legacy intent_matches: /${cond.pattern ?? ''}/`
-          break
-        default:
-          conditionDetail = `${cond.kind}`
+      if (cond.kind === 'context_matches') {
+        conditionDetail = `context.${cond.field ?? ''} ${cond.operator ?? 'contains'} "${cond.value ?? ''}"`
+      } else {
+        conditionDetail = `${cond.kind}`
       }
     } else {
       conditionDetail = 'always matches (no conditions)'

@@ -1,0 +1,25 @@
+# ERDL Rule — PR_EMOJI
+# Category: coding
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "pr_emoji"
+  description: "PR emoji 提醒"
+  tags: [coding]
+
+rules:
+  - name: "pr_emoji"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch"]
+        - field: "tool.args"
+          operator: match
+          value: "pull request|PR|merge request"
+    then: ALLOW
+    message: "PR 标题 emoji 前缀: feat/fix/docs/refactor/test/chore/style。"

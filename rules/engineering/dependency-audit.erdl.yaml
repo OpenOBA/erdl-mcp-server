@@ -1,0 +1,22 @@
+# ERDL Rule — DEPENDENCY AUDIT
+# Category: engineering · Advisory
+# ERDL SPEC §5 compliant
+protocol: "erdl/v1"
+version: "1.0.0"
+
+metadata:
+  name: "dependency_audit"
+  description: "engineering rule"
+  tags: [engineering]
+
+rules:
+  - name: "dependency_audit"
+    priority: 5
+    when:
+      logic: AND
+      conditions:
+        - field: "tool.name"
+          operator: in
+          value: ["write", "edit", "apply_patch", "exec"]
+    then: ALLOW
+    message: "定期审计依赖：过期的升级、不再用的删除、有漏洞的更换。"

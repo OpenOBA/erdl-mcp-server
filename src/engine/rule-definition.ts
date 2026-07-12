@@ -14,15 +14,10 @@
 // ============================================
 
 /**
- * Condition types suited for personal-agent rules.
- *
- * - `intent_contains`: The agent's current intent contains a keyword.
- *   e.g., `write_code`, `git_commit`, `write_blog`
- * - `intent_matches`: The agent's intent matches a regex pattern.
- * - `context_matches`: A field in the evaluation context matches a pattern.
- *   e.g., `file: "*.ts"`, `language: "typescript"`
+ * Condition kind — ERDL SPEC §5 defines a single kind: context_matches.
+ * All conditions evaluate field + operator + value against the execution context.
  */
-export type ConditionKind = 'intent_contains' | 'intent_matches' | 'context_matches'
+export type ConditionKind = 'context_matches'
 
 /** Spec v1.1 comparison operators */
 export type ConditionOperator =
@@ -117,7 +112,7 @@ export type RuleCategory =
   | 'custom'
 
 export interface RuleDefinition {
-  /** Unique rule ID (e.g., "TS-001") */
+  /** Unique rule ID (derived from name, e.g., "dangerous_command_intercept") */
   id: string
 
   /** Human-readable rule name */
@@ -129,11 +124,11 @@ export interface RuleDefinition {
   /** Category for organization */
   category: RuleCategory
 
-  /** Intent triggers that should cause this rule to be evaluated */
-  triggers: string[]
-
-  /** Match conditions */
+  /** Match conditions (ERDL SPEC §5 field/operator/value) */
   conditions: RuleCondition[]
+
+  /** Condition logic: AND = all must match, OR = any must match (SPEC §5) */
+  conditionLogic?: 'AND' | 'OR'
 
   /** Action to take when matched */
   action: RuleAction
@@ -144,7 +139,13 @@ export interface RuleDefinition {
   /** Whether this rule is currently active */
   enabled: boolean
 
-  /** Spec v1.1 Section 4.4: stops all further rule evaluation on match */
+  /**
+   * ERDL SPEC §4.4: hard constraint that immediately terminates all other rule
+   * evaluations upon match. Cannot be bypassed by LLMs.
+   *
+   * SPEC §5 levels: critical | high | normal | low
+   * Stored as boolean for engine simplicity.
+   */
   override?: boolean
 
   /** Rule version (for tracking changes) */
