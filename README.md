@@ -220,11 +220,26 @@ npx @openoba-ai/erdl-mcp@latest --uninstall  # Clean removal
 npx @openoba-ai/erdl-mcp@latest --help     # Full usage
 ```
 
-> **Stuck on an old version?** npx caches your first install. If `--version` shows an older release, clean the cache:
+> **Upgrading from v1.0.x?** You MUST update your MCP config:
+>
+> **Remove old local-path config:**
+> ```bash
+> openclaw mcp remove erdl  # or remove "erdl" from mcp.servers in config
+> ```
+>
+> **Re-add with npx (auto-latest):**
+> ```bash
+> openclaw mcp set erdl "{\"command\":\"npx\",\"args\":[\"-y\",\"@openoba-ai/erdl-mcp@latest\"]}"
+> ```
+> Or manually in `~/.openclaw/openclaw.json` → `mcp.servers.erdl`:
+> ```json
+> { "command": "npx", "args": ["-y", "@openoba-ai/erdl-mcp@latest"] }
+> ```
+>
+> **npm cache clearing** (if `--version` shows an older release):
 > ```bash
 > npm cache clean --force
 > ```
-> Then re-run: `npx @openoba-ai/erdl-mcp@latest`
 
 ### Run from Source
 
