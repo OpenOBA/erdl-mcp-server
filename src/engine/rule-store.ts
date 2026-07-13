@@ -258,6 +258,16 @@ export class RuleStore {
     const message = (raw.message as string) ?? ''
     const action = this.parseThenAction(thenDecision, message)
 
+    // Override ring from YAML if specified (SPEC §3.5 Execution Rings)
+    // Default rings are hardcoded in parseThenAction, but YAML ring takes precedence
+    const yamlRing = raw.ring
+    if (yamlRing !== undefined && yamlRing !== null) {
+      const ringNum = Number(yamlRing)
+      if (ringNum >= 0 && ringNum <= 3) {
+        action.ring = ringNum as 0 | 1 | 2 | 3
+      }
+    }
+
     // Parse explanation / alternative (bilingual support)
     if (raw.explanation) {
       action.explanation = raw.explanation as string | { zh: string; en: string }
@@ -267,6 +277,12 @@ export class RuleStore {
     }
 
     const id = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase()
+
+    // Parse compliance scope level (SPEC §4: 1=personal, 2=org, 3=national, 4=regional, 5=global)
+    const scopeRaw = raw.scope_level ?? raw.scopeLevel
+    const scopeLevel = typeof scopeRaw === 'number' && scopeRaw >= 1 && scopeRaw <= 5
+      ? (scopeRaw as 1 | 2 | 3 | 4 | 5)
+      : undefined
 
     return {
       id,
@@ -280,6 +296,7 @@ export class RuleStore {
       enabled,
       override,
       version: (raw.version as number) ?? 1,
+      scopeLevel,
       hitCount: 0,
     }
   }
