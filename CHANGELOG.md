@@ -2,6 +2,23 @@
 
 All notable changes to ERDL MCP Server will be documented in this file.
 
+## [1.1.4] — 2026-07-14
+
+### Fixed
+- **rule-store.ts**: Parse YAML `ring` field and override hardcoded defaults from `parseThenAction()` — rules with `ring: 0` in YAML were silently ignored, now aligns with ERDL SPEC §3.5 Execution Rings
+- **rule-store.ts**: Parse `scope_level` / `scopeLevel` field into `RuleDefinition.scopeLevel` — supports SPEC §4 compliance scope levels (1=personal, 2=org, 3=national, 4=regional, 5=global)
+- **rules/coding/no-nested-ternary.erdl.yaml**: Corrected `then: ALLOW` → `then: DENY` — rule message said "禁止嵌套三元表达式" but decision was ALLOW, causing it to pass instead of block
+
+### Changed
+- **openclaw-plugin**: `contracts.agentToolResultMiddleware` changed from `true` (boolean) to `["openclaw", "codex"]` (platform array) — required by OpenClaw 2026.6.8+
+- **openclaw-plugin**: Bump version to 1.0.0-alpha.2
+
+### Verified
+- Build: 0 errors | Test: 44/44 pass
+- 37 rules loaded from `~/.openoba/rules/` (30 presets + 6 Rulsynor iron laws + 1 user rule)
+- `openclaw plugins doctor` → No plugin issues detected
+- Ring distribution: 11 DENY (Ring 0) + 15 ALLOW (Ring 3) + 11 other
+
 ## [1.1.0] — 2026-07-12
 
 ### Changed
