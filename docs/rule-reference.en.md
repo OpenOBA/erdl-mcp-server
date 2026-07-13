@@ -1,6 +1,6 @@
 # ERDL Rule Reference — Complete Guide for Agents
 
-> **67 rules across 8 categories. Deterministic enforcement, not suggestions.**
+> **30 rules across 6 categories. Deterministic enforcement, not suggestions.**
 > Version: 1.1.2 · Format: ERDL SPEC §5 · Extension: `.erdl.yaml`
 
 ---

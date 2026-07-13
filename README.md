@@ -5,9 +5,9 @@
 [![npm version](https://img.shields.io/npm/v/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![license](https://img.shields.io/npm/l/@openoba-ai/erdl-mcp)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
-[![tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
+[![tests](https://img.shields.io/badge/tests-44%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
 
-ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 67 built-in rules across 8 categories. Unlimited personal rules. **Free forever.**
+ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 built-in rules across 6 categories. Unlimited personal rules. **Free forever.**
 
 ---
 
@@ -25,14 +25,14 @@ ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 67 
 ## Quick Start
 
 ```bash
-# Start MCP Server (5 tools, 67 rules — all MCP clients)
+# Start MCP Server (5 tools, 30 rules — all MCP clients)
 npx -y @openoba-ai/erdl-mcp
 
 # Or: install OpenClaw Plugin for hardware enforcement
 openclaw plugins install @openoba-ai/erdl-openclaw
 ```
 
-67 rules active immediately. No account. No configuration. No API key.
+30 rules active immediately. No account. No configuration. No API key.
 
 **中文用户：**
 ```bash
@@ -46,7 +46,7 @@ npx -y @openoba-ai/erdl-mcp --lang zh
 | | Free | Pro |
 |------|:---:|:---:|
 | 5 MCP Tools | ✅ | ✅ |
-| 67 Preset Rules | ✅ | ✅ |
+| 30 Preset Rules | ✅ | ✅ |
 | Unlimited Personal Rules | ✅ | ✅ |
 | Chinese / English | ✅ | ✅ |
 | All 11 Operators | ✅ | ✅ |
@@ -90,7 +90,7 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 
 ## What's Included
 
-### 67 Built-in Rules (8 Categories)
+### 30 Built-in Rules (8 Categories)
 
 | Category | Rules | Scope |
 |----------|:-----:|-------|
@@ -207,7 +207,7 @@ rules:
 
 [📚 Full tutorial: Create Your First ERDL Rule →](./docs/tutorial-create-rules.md) ([English](./docs/tutorial-create-rules.en.md))
 
-[📖 Complete Rule Reference (all 67 rules with modification guides) →](./docs/rule-reference.md) ([English](./docs/rule-reference.en.md))
+[📖 Complete Rule Reference (all 30 rules with modification guides) →](./docs/rule-reference.md) ([English](./docs/rule-reference.en.md))
 
 ---
 

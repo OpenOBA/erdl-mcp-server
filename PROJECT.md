@@ -53,7 +53,7 @@ erdl-mcp-server/
 │   │   ├── list-rules.ts     # erdl_list_rules — list/filter loaded rules
 │   │   └── explain.ts        # erdl_explain — full decision trail
 │   └── presets/              # (DELETED in v1.1.0 — migrated to YAML files)
-├── rules/                    # 67 .erdl.yaml files across 8 categories
+├── rules/                    # 30 .erdl.yaml files across 8 categories
 │   ├── coding/       (10)    # TypeScript quality, Git discipline
 │   ├── engineering/  (24)    # Workflow discipline, pipeline gates
 │   ├── security/     (6)     # Vulnerability prevention (3 Guards)
@@ -75,8 +75,8 @@ erdl-mcp-server/
 │   ├── tool-api-reference.md
 │   ├── tutorial-create-rules.md     (zh)
 │   ├── tutorial-create-rules.en.md  (en)
-│   ├── rule-reference.md            (zh — full 67-rule reference)
-│   └── rule-reference.en.md         (en — full 67-rule reference)
+│   ├── rule-reference.md            (zh — full 30-rule reference)
+│   └── rule-reference.en.md         (en — full 30-rule reference)
 ├── openclaw-plugin/          # OpenClaw Plugin for hard tool call interception
 ├── scripts/
 │   ├── install.sh            # macOS/Linux install
