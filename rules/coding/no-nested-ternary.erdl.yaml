@@ -21,5 +21,5 @@ rules:
         - field: "tool.args"
           operator: match
           value: '\?.*:.*\?'
-    then: ALLOW
+    then: DENY
     message: "禁止嵌套三元表达式。用 if/else 或提前返回。"
