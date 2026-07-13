@@ -1,6 +1,6 @@
 {
   "name": "@openoba-ai/erdl-openclaw",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-alpha.2",
   "type": "module",
   "description": "ERDL Action Guard as an OpenClaw Plugin — deterministic rules that intercept every tool call before execution",
   "main": "dist/plugin.js",
