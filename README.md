@@ -7,6 +7,8 @@
 [![license](https://img.shields.io/npm/l/@openoba-ai/erdl-mcp)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
 [![tests](https://img.shields.io/badge/tests-44%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
 
+> 📖 [中文版](./README.zh.md)
+
 ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 built-in rules across 6 categories. Unlimited personal rules. **Free forever.**
 
 ---
