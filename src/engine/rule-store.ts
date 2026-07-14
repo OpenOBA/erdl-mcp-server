@@ -62,11 +62,74 @@ export class RuleStore {
       console.error(`[erdl-mcp] Created rules directory: ${dir}`)
     }
 
+    // Load built-in presets first (available in Plugin build context)
+    await this.loadBuiltinPresets()
+
     const loaded = this.loadFromDir(dir)
+
+    // Re-apply built-in presets (overrides any stale YAML versions)
+    await this.loadBuiltinPresets()
+
     this.startWatch(dir)
 
-    console.error(`[erdl-mcp] Loaded ${loaded} rules from ${dir}`)
+    console.error(`[erdl-mcp] Loaded ${this.rules.size} rules (${loaded} from filesystem)`)
     return loaded
+  }
+
+  /** Load built-in preset rules (shipped with the Plugin). */
+  async loadBuiltinPresets(): Promise<void> {
+    try {
+      // Use fileURLToPath + import.meta.url for ESM compatibility
+      // (__dirname is not available in ES modules)
+      const __dir = path.dirname((await import('node:url')).fileURLToPath(import.meta.url))
+      const presetsDir = path.join(__dir, '..', 'presets')
+      const codingPath = path.join(presetsDir, 'coding', 'all.js')
+      const engineeringPath = path.join(presetsDir, 'engineering', 'all.js')
+      const designPath = path.join(presetsDir, 'design', 'all.js')
+      const writingPath = path.join(presetsDir, 'writing', 'all.js')
+
+      if (!fs.existsSync(codingPath)) return
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const coding = require(codingPath)
+      const engineering = require(engineeringPath)
+      const design = require(designPath)
+      const writing = require(writingPath)
+
+      const presets = [
+        ...(coding.codingRules ?? []),
+        ...(engineering.engineeringRules ?? []),
+        ...(design.designRules ?? []),
+        ...(writing.allWritingRules ?? []),
+      ]
+      if (presets.length === 0) return
+
+      let added = 0
+      let updated = 0
+
+      const builtinNames = new Set(presets.map((r: RuleDefinition) => r.name))
+      for (const [id, rule] of this.rules) {
+        if (builtinNames.has(rule.name) && !presets.some((p: RuleDefinition) => p.id === id)) {
+          this.rules.delete(id)
+        }
+      }
+
+      for (const rule of presets) {
+        const existing = this.rules.get(rule.id)
+        if (existing) {
+          this.rules.set(rule.id, rule)
+          updated++
+        } else {
+          this.rules.set(rule.id, rule)
+          added++
+        }
+      }
+
+      console.error(`[erdl-mcp] Built-in presets: ${presets.length} (${added} new, ${updated} updated)`)
+    } catch (e) {
+      // Presets not available — standalone MCP Server, rules from filesystem only
+      console.error(`[erdl-mcp] Built-in presets skipped: ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   /** Reload all rules (called on file change) */
