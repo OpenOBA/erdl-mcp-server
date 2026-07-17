@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![license](https://img.shields.io/npm/l/@openoba-ai/erdl-mcp)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
-[![tests](https://img.shields.io/badge/tests-44%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
+[![tests](https://img.shields.io/badge/tests-92%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
 
 > 📖 [中文版](./README.zh.md)
 

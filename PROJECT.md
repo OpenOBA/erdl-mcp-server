@@ -64,7 +64,12 @@ erdl-mcp-server/
 │   ├── engine/
 │   │   ├── expression.test.ts (23 tests)
 │   │   └── evaluator.test.ts  (21 tests)
-│   └── presets/              # (DELETED in v1.1.0)
+│   └── tools/
+│       ├── evaluate.test.ts    (11 tests)
+│       ├── explain.test.ts     (9 tests)
+│       ├── list-rules.test.ts  (10 tests)
+│       ├── create-rule.test.ts (9 tests)
+│       └── simulate.test.ts    (9 tests)
 ├── docs/
 │   ├── README.md
 │   ├── CHANGELOG.md
@@ -108,7 +113,7 @@ erdl-mcp-server/
 | Metric | Value |
 |--------|-------|
 | Build errors | 0 |
-| Unit tests | 44 (23 expression + 21 evaluator) |
+| Unit tests | 92 (44 engine + 48 tools) |
 | Test pass rate | 100% |
 | Guard rules | 9 (Ring 0, DENY/EMERGENCY_HALT — hard intercept) |
 | Advisory rules | 21 (Ring 3, ALLOW/CORRECT/REQUEST_HUMAN) |

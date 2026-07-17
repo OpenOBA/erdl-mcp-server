@@ -16,16 +16,18 @@ All notable changes to ERDL MCP Server will be documented in this file.
   - ALLOW/PASS 明确展示已检查规则数，用户可见"ERDL 引擎已检查"
   - 每类输出末尾提示可调用 `erdl_explain` 查看完整链路
 - **explain.ts**: 决策链路增强 — 按 decision 分组展示、条件中文可读化（`=` `≠` `包含`）、补充 explanation/alternative/ring 信息
+- **test/tools/**: 5 工具集成测试 48 个 — evaluate (11), explain (9), list-rules (10), create-rule (9), simulate (9)
 
 ### Changed
 - 版本号 1.1.4 → 1.1.5
 
 ### Verified
-- Build: 0 errors | Test: 44/44 pass
+- Build: 0 errors | Test: 92/92 pass (44 engine + 48 tools)
 - 运行时实测：30 built-in + 7 user = 37 rules 正常加载
 - 不再出现 "Built-in presets skipped: require is not defined"
 - Plugin + standalone MCP Server 均走同一加载路径
 - 富 Markdown 输出在 DENY/ALLOW/PASS/EXPLAIN 场景均正常渲染
+- 5 工具 happy path + invalid input + edge case 全覆盖
 
 ## [1.1.4] — 2026-07-14
 
