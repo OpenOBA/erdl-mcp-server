@@ -1,7 +1,7 @@
 # ERDL Rule Reference — Complete Guide for Agents
 
 > **30 rules across 6 categories. Deterministic enforcement, not suggestions.**
-> Version: 1.1.2 · Format: ERDL SPEC §5 · Extension: `.erdl.yaml`
+> Version: 1.1.5 · Format: ERDL SPEC §5 · Extension: `.erdl.yaml`
 
 ---
 
@@ -27,7 +27,7 @@ Agents can directly read, edit, and create these files.
 
 ---
 
-## Category 1: coding (10 rules)
+## Category 1: coding (6 rules)
 
 Rules for TypeScript code quality, Git discipline, and dependency hygiene.
 **Directory:** `~/.openoba/rules/coding/`
@@ -47,7 +47,7 @@ Rules for TypeScript code quality, Git discipline, and dependency hygiene.
 
 ---
 
-## Category 2: engineering (24 rules)
+## Category 2: engineering (12 rules)
 
 Rules for workflow discipline, pipeline gates, and engineering habits.
 **Directory:** `~/.openoba/rules/engineering/`
@@ -97,80 +97,38 @@ Rules for vulnerability prevention and secure coding practices.
 
 ---
 
-## Category 4: testing (11 rules)
+## Category 4: testing (2 rules)
 
-Rules for test coverage, quality gates, and TDD workflow.
+Rules for test coverage and quality gates.
 **Directory:** `~/.openoba/rules/testing/`
 
 | # | Rule Name | Type | When It Fires | What It Does | How to Modify |
 |---|-----------|------|---------------|-------------|---------------|
-| 1 | `boundary_conditions_required` | CORRECT | Writing test code | Reminds: test null/undefined/empty/0/negative/max values. | Add domain-specific boundary cases. |
-| 2 | `coverage_never_drops` | CORRECT | Writing test code | Reminds: new code coverage must not be lower than existing. | Set numeric coverage threshold (e.g., >= 80%). |
-| 3 | `critical_path_full_coverage` | CORRECT | Writing test code | Reminds: payment/login/perm/delete paths need 100% coverage. | Add project-specific critical paths. |
-| 4 | `no_behavior_without_test` | CORRECT | Writing test code | Reminds: every feature/fix/refactor needs a test. Write test first. | Enforce TDD: block untested code with DENY. |
-| 5 | `no_feature_on_broken_build` | CORRECT | Working with build/test commands | Reminds: don't add features on broken builds. Fix first. | Add CI pipeline check reference. |
-| 6 | `no_flaky_tests` | CORRECT | Using setTimeout/sleep/Math.random in tests | Reminds: avoid non-deterministic test behavior. Use mock timers. | Add seed/mock patterns reference. |
-| 7 | `no_implementation_coupled_tests` | ALLOW | Writing test code | Reminds: test behavior, not implementation. Refactoring should not break tests. | Add behavior-test examples. |
-| 8 | `no_tautological_tests` | CORRECT | Writing test code | Reminds: avoid "expect mock to return mock result" tests. Test real logic. | Add anti-pattern examples. |
-| 9 | `repro_before_fix` | CORRECT | Writing test code | Reminds: RED (repro test) → GREEN (fix) → REFACTOR. | Enforce TDD order with DENY. |
-| 10 | `test_as_documentation` | ALLOW | Writing test code | Reminds: tests are documentation. Names should describe business behavior. | Add naming convention examples. |
-| 11 | `test_audit_trail` | ALLOW | Writing test code | Reminds: every test traces to a requirement/bug/story. Tests document decisions. | Add traceability format. |
+| 1 | `coverage_never_drops` | ALLOW | Modifying test code | Reminds: new code coverage must not be lower than existing. | Set numeric coverage threshold (e.g., >= 80%). |
+| 2 | `no_behavior_without_test` | ALLOW | Adding new feature code | Reminds: every feature/fix needs a test. Write test first. | Enforce TDD: block untested code with DENY. |
 
 ---
 
-## Category 5: performance (3 rules)
+## Category 5: observability (1 rule)
 
-Rules for optimization constraints and database query hygiene.
-**Directory:** `~/.openoba/rules/performance/`
-
-| # | Rule Name | Type | When It Fires | What It Does | How to Modify |
-|---|-----------|------|---------------|-------------|---------------|
-| 1 | `measure_before_optimize` | ALLOW | Optimization-related code | Reminds: measure first, optimize later. No baseline = guessing. | Add profiling tool references. |
-| 2 | `no_n_plus_one` | CORRECT | Loops with database queries inside | Reminds: use JOIN or batch queries to avoid N+1 problem. | Add ORM-specific eager loading patterns. |
-| 3 | `paginate_all_lists` | CORRECT | `findAll` or `SELECT *` queries | Reminds: all list queries must be paginated. Use LIMIT + OFFSET. | Set default page size. |
-
----
-
-## Category 6: observability (3 rules)
-
-Rules for logging, monitoring, and health checks.
+Rules for logging security.
 **Directory:** `~/.openoba/rules/observability/`
 
 | # | Rule Name | Type | When It Fires | What It Does | How to Modify |
 |---|-----------|------|---------------|-------------|---------------|
-| 1 | `no_secrets_in_logs` | ALLOW | Logging passwords/tokens/PII | Reminds: log only IDs/hashes, never raw secrets. Log pipeline breach = all history exposed. | Add PII field list. |
-| 2 | `structured_logging` | CORRECT | Using console.log/logging libraries | Reminds: use structured JSON logging with timestamp/level/message/context. | Add log format schema. |
-| 3 | `health_check` | ALLOW | Any code/engineering operation | Reminds: all services need /health endpoint returning 200 + dependency status. | Add health check template. |
+| 1 | `no_secrets_in_logs` | ALLOW | Logging passwords/tokens/PII | Reminds: log only IDs/hashes, never raw secrets or PII. | Add PII field list. |
 
 ---
 
-## Category 7: design (3 rules)
+## Category 6: writing (2 rules)
 
-Rules for UI/UX, responsive design, and accessibility.
-**Directory:** `~/.openoba/rules/design/`
-
-| # | Rule Name | Type | When It Fires | What It Does | How to Modify |
-|---|-----------|------|---------------|-------------|---------------|
-| 1 | `a11y_basics` | CORRECT | UI code with aria/alt/role attributes | Reminds: images need alt, interactive elements need aria, forms need labels. | Add WCAG level requirements. |
-| 2 | `responsive_first` | CORRECT | Responsive/adaptive UI code | Reminds: mobile-first design. Phone layout first, desktop via @media. | Add breakpoint definitions. |
-| 3 | `tailwind_first` | CORRECT | Using Tailwind/CSS classes | Reminds: prefer Tailwind utility classes, avoid inline styles. | Add design system class reference. |
-
----
-
-## Category 8: writing (7 rules)
-
-Rules for tone, formatting, clarity, and avoiding AI cliches.
+Rules for tone and avoiding AI cliches.
 **Directory:** `~/.openoba/rules/writing/`
 
 | # | Rule Name | Type | When It Fires | What It Does | How to Modify |
 |---|-----------|------|---------------|-------------|---------------|
-| 1 | `chinese_english_spacing` | CORRECT | Mixing Chinese and English text | Reminds: add space between Chinese and English/digits. | Add more language pair rules. |
-| 2 | `direct_tone` | CORRECT | Any writing output | Reminds: be direct and precise. No roundabout language. | Add tone examples. |
-| 3 | `heading_hierarchy` | ALLOW | Using markdown headings | Reminds: don't skip heading levels (H1→H3). Maintain hierarchy. | Add heading checklist. |
-| 4 | `list_consistency` | ALLOW | Using markdown lists | Reminds: keep list items structurally and punctuation-consistent. | Add list format examples. |
-| 5 | `no_ai_jargon` | CORRECT | Using AI cliches (delve, unleash, etc.) | Reminds: avoid AI-generated filler words. Be specific. | Add more banned words. |
-| 6 | `no_cliche` | CORRECT | Using business cliches (synergy, paradigm, etc.) | Reminds: avoid empty buzzwords. Use concrete language. | Add industry-specific banned words. |
-| 7 | `short_sentences` | ALLOW | Any writing output | Reminds: use short sentences. One point per sentence. Split if >25 words. | Adjust sentence length threshold. |
+| 1 | `direct_tone` | CORRECT | Any writing output | Reminds: be direct and precise. No roundabout language. | Add tone examples. |
+| 2 | `no_ai_jargon` | CORRECT | Using AI cliches (delve, unleash, etc.) | Reminds: avoid AI-generated filler words. Be specific. | Add more banned words. |
 
 ---
 

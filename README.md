@@ -1,132 +1,93 @@
 # ERDL MCP Server
 
-> **Deterministic rules for AI Agents. Say it once. Never repeat.**
+> **Stop reminding your Agent to behave. Teach it.**
+> **One when/then sentence is all it takes.**
 
 [![npm version](https://img.shields.io/npm/v/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![npm downloads](https://img.shields.io/npm/dm/@openoba-ai/erdl-mcp)](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 [![license](https://img.shields.io/npm/l/@openoba-ai/erdl-mcp)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
 [![tests](https://img.shields.io/badge/tests-92%20passing-brightgreen)](https://github.com/OpenOBA/erdl-mcp-server/actions)
+[![MCP](https://img.shields.io/badge/MCP-protocol-blue)](https://modelcontextprotocol.io)
+[![MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/OpenOBA/erdl-mcp-server/blob/master/LICENSE)
 
 > 📖 [中文版](./README.zh.md)
 
-ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 built-in rules across 6 categories. Unlimited personal rules. **Free forever.**
+```bash
+npx -y @openoba-ai/erdl-mcp
+```
 
-> 🆕 v1.1.5 — Rich Markdown output for full user-facing visibility + P0 fix: 30 built-in rules now load correctly
+**30 rules. 5 tools. Zero config. Unlimited custom rules. Free forever.**
+
+![ERDL demo — intercepting rm -rf /](./docs/demo.svg)
 
 ---
 
-## Why ERDL?
+## The Problem
 
-| Without ERDL | With ERDL |
-|-------------|-----------|
-| "Don't use `any`" — forgotten in 5 turns | Rules enforced **deterministically**, every tool call |
-| "Write shorter sentences" — ignored | Writing rules fire before every output |
-| "Confirm before adding deps" — skipped | **Blocked** until you confirm |
-| "Why did you do that?" — no answer | `erdl_explain` shows the full decision trail |
+You tell your Agent "don't use `any`", "keep it short", "ask before adding dependencies". It nods. Five turns later, it's back to its old habits.
+
+**Prompt-based rules don't work.** LLMs forget. They reinterpret. They rationalize. You're not guiding them — you're negotiating with them.
+
+---
+
+## The Solution
+
+ERDL (Entity-Rule Definition Language) is a **deterministic rule engine** that runs as an MCP Server. Your Agent doesn't *try* to follow rules — the engine *enforces* them before every tool call.
+
+| You say | What actually happens |
+|---------|----------------------|
+| "Never use `any`" | **Blocked**. The engine intercepts `write_file` calls, scans the content, and rejects `any` before the write happens. |
+| "Don't start with 'In today's world'" | **Denied**. Writing rules fire before every output. The Agent receives the correction before it speaks. |
+| "Ask before adding npm dependencies" | **Intercepted**. `exec` of `npm install` is stopped. You approve it, or it doesn't happen. |
+| "Why did you do that?" | **Explained**. `erdl_explain` shows exactly which rule fired, what condition matched, and what happened. |
+
+---
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Agent Workflow                        │
+│                                                         │
+│  User says: "Write me a function"                       │
+│       │                                                 │
+│       ▼                                                 │
+│  LLM plans: use write_file(path, code)                  │
+│       │                                                 │
+│       ▼                                                 │
+│  ┌──────────────────────────────────────┐               │
+│  │    ERDL Action Guard (MCP Server)    │  ← Protocol   │
+│  │                                      │    Layer      │
+│  │  1. Load 30 built-in rules           │               │
+│  │  2. Evaluate: field/operator/value   │               │
+│  │  3. Decision: ALLOW / DENY / CORRECT │               │
+│  │  4. Return badge card + explanation  │               │
+│  └──────────────────────────────────────┘               │
+│       │                                                 │
+│       ▼                                                 │
+│  Tool executes (or is blocked)                          │
+│                                                         │
+│  No prompt engineering. No negotiation. Protocol-level. │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Quick Start
 
 ```bash
-# Start MCP Server (5 tools, 30 rules — all MCP clients)
+# One command. 30 rules active immediately.
 npx -y @openoba-ai/erdl-mcp
-
-# Or: install OpenClaw Plugin for hardware enforcement
-openclaw plugins install @openoba-ai/erdl-openclaw
 ```
 
-30 rules active immediately. No account. No configuration. No API key.
+That's it. No account. No API key. No configuration.
 
-**中文用户：**
+**Chinese / 中文：**
 ```bash
 npx -y @openoba-ai/erdl-mcp --lang zh
 ```
 
----
-
-## Free vs Pro
-
-| | Free | Pro |
-|------|:---:|:---:|
-| 5 MCP Tools | ✅ | ✅ |
-| 30 Preset Rules | ✅ | ✅ |
-| Unlimited Personal Rules | ✅ | ✅ |
-| Chinese / English | ✅ | ✅ |
-| All 11 Operators | ✅ | ✅ |
-| MIT Open Source | ✅ | ✅ |
-| **Execution Rings 1–2** (REQUEST_HUMAN, ESCALATE, ROLLBACK, QUARANTINE) | — | ✅ |
-| **Guardian Agent Role** (监管者模式) | — | ✅ |
-| **Audit Export** (OCSF / OTLP) | — | ✅ |
-| **Team Rules** (组织级规则共享) | — | ✅ |
-| **Dashboard** (规则命中统计) | — | ✅ |
-| **Enterprise Compliance Packs** (GB/Z 185, NIST, EU AI Act) | — | Enterprise |
-
-[Get a Pro License →](https://openoba.com/erdl-mcp/pro)
-
-### One-command Install
-
-```bash
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/OpenOBA/erdl-mcp-server/master/scripts/install.sh | bash
-```
-
-```powershell
-# Windows (PowerShell)
-iwr https://raw.githubusercontent.com/OpenOBA/erdl-mcp-server/master/scripts/install.ps1 | iex
-```
-
----
-
-## Why ERDL vs SKILL.md / Prompt Rules?
-
-| | Prompt-Based Rules | ERDL MCP Server |
-|---|:---:|:---:|
-| Execution | LLM "tries" to follow | **Deterministic engine** — guaranteed |
-| Visibility | Invisible, can't tell if it worked | `erdl_explain` shows every decision |
-| Reliability | LLM may ignore or forget | **Zero hallucination** — condition match is mathematical |
-| Testing | Manual | `erdl_simulate` with 3 auto-scenarios |
-| Portability | Single platform | **All MCP-compatible Agents** |
-
-ERDL rules don't suggest. They don't hope. They **enforce**.
-
----
-
-## What's Included
-
-### 30 Built-in Rules (6 Categories)
-
-| Category | Rules | Scope |
-|----------|:-----:|-------|
-| `engineering` | 13 | Workflow discipline, pipeline gates, no shortcuts, self-verify, decision logging |
-| `coding` | 6 | TypeScript quality: no `any`, no `@ts-ignore`, naming conventions, dependency hygiene |
-| `security` | 6 | No eval with input, no hardcoded secrets, no string SQL, validate all input, security headers |
-| `testing` | 2 | Coverage never drops, no behavior without test |
-| `writing` | 2 | Direct tone, no AI jargon |
-| `observability` | 1 | No secrets in logs |
-
-### 5 MCP Tools
-
-| Tool | Purpose |
-|------|---------|
-| `erdl_evaluate` | Action Guard — check rules before every tool call |
-| `erdl_simulate` | Test a rule against 3 scenarios before creating |
-| `erdl_create_rule` | Create a rule from natural language |
-| `erdl_list_rules` | List all active rules |
-| `erdl_explain` | Full decision trail for any action |
-
-### MCP Resources
-
-| Resource | Content |
-|----------|---------|
-| `erdl://rules/list` | All rules as JSON |
-| `erdl://status` | Server runtime status |
-
----
-
-## Installation
-
-### Any MCP Client
+Add it to your MCP client:
 
 ```json
 {
@@ -139,52 +100,96 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 }
 ```
 
-Or let ERDL generate the config for your client:
+Or let ERDL generate the config:
 
 ```bash
 npx @openoba-ai/erdl-mcp@latest --setup
 ```
 
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or the equivalent path on your OS.
-
-### Cursor
-
-Add to `.cursor/mcp.json` in your project root.
-
-### OpenClaw
-
-```bash
-# MCP Server (all MCP clients)
-openclaw mcp set erdl '{"command":"npx","args":["-y","@openoba-ai/erdl-mcp@latest"]}'
-
-# OpenClaw Plugin (hard enforcement via before_tool_call)
-openclaw plugins install @openoba-ai/erdl-openclaw
-```
-
-> **Plugin vs MCP Server**: The MCP Server gives your Agent ERDL tools. The Plugin adds **deterministic tool call interception** — rules run BEFORE every exec/write/search, no relying on LLM self-discipline. Install both for maximum protection.
-
-### VS Code / GitHub Copilot
-
-Add to `.vscode/mcp.json` or the Copilot MCP configuration.
+**Supported clients:** Claude Desktop · Cursor · VS Code / Copilot · OpenClaw · WorkBuddy · any MCP-compatible client.
 
 ---
 
-## Creating Your First Rule
+## ERDL vs Prompt Rules
+
+| | Prompt / SKILL.md | ERDL |
+|---|:---:|:---:|
+| **Enforcement** | LLM "tries" to follow | **Deterministic engine** — guarantees execution |
+| **Reliability** | May forget after 5 turns | Condition match is mathematical — **zero hallucination** |
+| **Visibility** | Can't tell if it worked | `erdl_explain` shows every decision, every rule |
+| **Testing** | Manual verification | `erdl_simulate` — 3 auto-generated scenarios |
+| **Portability** | Tied to one platform | **All MCP-compatible Agents** |
+| **Overridability** | LLM can "reinterpret" | **Protocol-layer block** — Agent cannot bypass |
+
+---
+
+## What's Included
+
+### 30 Built-in Rules
+
+| Category | Count | Covers |
+|----------|:-----:|--------|
+| `engineering` | 13 | Pipeline gates, no shortcuts, self-verify, decision logging, no force-push, no stash |
+| `coding` | 6 | No `any`, no `@ts-ignore`, naming conventions, one-commit-one-change, dependency hygiene |
+| `security` | 6 | No eval with input, no hardcoded secrets, no string SQL, validate all input, security headers, no stack traces |
+| `testing` | 2 | Coverage never drops, no behavior without test |
+| `writing` | 2 | Direct tone, no AI jargon |
+| `observability` | 1 | No secrets in logs |
+
+### 5 MCP Tools
+
+| Tool | Use it when |
+|------|-------------|
+| `erdl_evaluate` | **Before every tool call** — mandatory Action Guard |
+| `erdl_simulate` | Test a rule against 3 scenarios before creating it |
+| `erdl_create_rule` | User says "remember this" → create a rule from NL |
+| `erdl_list_rules` | User asks "what rules are active?" |
+| `erdl_explain` | User asks "why did you do that?" → full decision trail |
+
+### 2 Resources
+
+| Resource | Purpose |
+|----------|---------|
+| `erdl://rules/list` | All active rules as JSON |
+| `erdl://status` | Runtime status: rule counts by category, agent role |
+
+---
+
+## Creating a Rule
+
+> **Turn your pain points into rules, one sentence at a time — banned, period.**
+> **Turn your experience into rules, one sentence at a time — shared, forever.**
+
+Every pain point is a `when(…) then(…)` sentence:
+
+> when [trigger] · then [action]
+
+| Variable | Meaning | Example |
+|----------|---------|---------|
+| **when** | What triggers it | code contains `any` · logs contain secrets · `git stash` used |
+| **then** | What happens | **Block** it · **Correct** it · **Allow** with a warning · **Pause** for approval |
+
+Fill in the blanks:
+
+> **when** code contains `any` **then** block it\.
+
+That's a rule.
 
 ```
-You: "Never use `any` in TypeScript."
+You →   "Never use `any` in TypeScript."
 
-Agent: 1. erdl_simulate → tests the rule against 3 scenarios
-       2. erdl_create_rule → saves to ~/.openoba/rules/
-       3. Rule is now active. Next `any` will be blocked.
+Agent → 1. erdl_simulate   → tests against 3 scenarios
+        2. erdl_create_rule → saves to ~/.openoba/rules/
+        3. Rule is active.  → next `any` is blocked.
 
-You: "Why did you reject my code?"
-Agent: erdl_explain → shows every rule that fired
+You →   "Why was my code rejected?"
+
+Agent → erdl_explain → full decision trail:
+         ✅ no_any: tool.name in [write_file, edit, apply_patch] AND content contains "any"
+         → DENY: Do not use `any` type.
 ```
 
-Or create rules manually in `~/.openoba/rules/` (ERDL SPEC §5 format):
+Or write rules by hand in `~/.openoba/rules/` (ERDL SPEC §5 format):
 
 ```yaml
 protocol: "erdl/v1"
@@ -207,53 +212,68 @@ rules:
     message: "Remove console.log before committing"
 ```
 
-[📚 Full tutorial: Create Your First ERDL Rule →](./docs/tutorial-create-rules.md) ([English](./docs/tutorial-create-rules.en.md))
+[📚 Full Tutorial →](./docs/tutorial-create-rules.md) · [📖 Rule Reference (30 rules) →](./docs/rule-reference.md)
 
-[📖 Complete Rule Reference (all 30 rules with modification guides) →](./docs/rule-reference.md) ([English](./docs/rule-reference.en.md))
+---
+
+## Free vs Pro
+
+| | Free | Pro |
+|------|:---:|:---:|
+| 5 MCP Tools | ✅ | ✅ |
+| 30 Preset Rules | ✅ | ✅ |
+| Unlimited Personal Rules | ✅ | ✅ |
+| Chinese / English | ✅ | ✅ |
+| All 11 Operators | ✅ | ✅ |
+| MIT Open Source | ✅ | ✅ |
+| **Execution Rings 1–2** (REQUEST_HUMAN, ESCALATE, ROLLBACK, QUARANTINE) | — | ✅ |
+| **Guardian Agent Role** | — | ✅ |
+| **Audit Export** (OCSF / OTLP) | — | ✅ |
+| **Team Rules** | — | ✅ |
+| **Dashboard** (hit statistics) | — | ✅ |
+| **Enterprise Compliance** (GB/Z 185, NIST, EU AI Act) | — | Enterprise |
+
+[Get a Pro License →](https://openoba.com/erdl-mcp/pro)
 
 ---
 
 ## CLI Reference
 
 ```bash
-npx @openoba-ai/erdl-mcp@latest          # Start MCP server (always latest)
-npx @openoba-ai/erdl-mcp@latest --lang zh # Chinese mode
-npx @openoba-ai/erdl-mcp@latest --upgrade  # Upgrade to latest
-npx @openoba-ai/erdl-mcp@latest --uninstall  # Clean removal
-npx @openoba-ai/erdl-mcp@latest --help     # Full usage
-npx @openoba-ai/erdl-mcp@latest --setup    # Show MCP client config
+npx @openoba-ai/erdl-mcp@latest           # Start (auto-latest via npx)
+npx @openoba-ai/erdl-mcp@latest --lang zh  # Chinese mode
+npx @openoba-ai/erdl-mcp@latest --upgrade   # Force upgrade
+npx @openoba-ai/erdl-mcp@latest --uninstall # Clean removal
+npx @openoba-ai/erdl-mcp@latest --setup     # Show MCP config
+npx @openoba-ai/erdl-mcp@latest --help      # Full usage
 ```
 
-> **Upgrading from v1.0.x?** You MUST update your MCP config:
->
-> **Remove old local-path config:**
-> ```bash
-> openclaw mcp remove erdl  # or remove "erdl" from mcp.servers in config
-> ```
->
-> **Re-add with npx (auto-latest):**
-> ```bash
-> openclaw mcp set erdl "{\"command\":\"npx\",\"args\":[\"-y\",\"@openoba-ai/erdl-mcp@latest\"]}"
-> ```
-> Or manually in `~/.openclaw/openclaw.json` → `mcp.servers.erdl`:
-> ```json
-> { "command": "npx", "args": ["-y", "@openoba-ai/erdl-mcp@latest"] }
-> ```
->
-> **npm cache clearing** (if `--version` shows an older release):
-> ```bash
-> npm cache clean --force
-> ```
+---
 
-### Run from Source
+## From Source
 
 ```bash
 git clone https://github.com/OpenOBA/erdl-mcp-server.git
 cd erdl-mcp-server
 npm install
 npm run build
-node bin/erdl-mcp.js --version
+npm test        # 92 tests
+node bin/erdl-mcp.js
 ```
+
+---
+
+## Contributing
+
+ERDL MCP Server is MIT-licensed and open to contributions. See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+---
+
+## Star History
+
+If ERDL helps your workflow, [give us a ⭐ on GitHub](https://github.com/OpenOBA/erdl-mcp-server) — it helps others discover the project.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=OpenOBA/erdl-mcp-server&type=Date)](https://star-history.com/#OpenOBA/erdl-mcp-server&Date)
 
 ---
 
@@ -261,4 +281,4 @@ node bin/erdl-mcp.js --version
 
 MIT · [OpenOBA](https://openoba.com) · [@OpenOBA](https://github.com/OpenOBA)
 
-Built by AI + Human. Deterministic architecture, not prompt engineering.
+> Deterministic architecture, not prompt engineering.

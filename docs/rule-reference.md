@@ -1,7 +1,7 @@
 # ERDL 规则参考手册 — Agent 完整指南
 
 > **30 条规则，6 个分类。确定性执行，不是建议。**
-> 版本：1.1.2 · 格式：ERDL SPEC §5 · 扩展名：`.erdl.yaml`
+> 版本：1.1.5 · 格式：ERDL SPEC §5 · 扩展名：`.erdl.yaml`
 
 ---
 
@@ -27,7 +27,7 @@ Agent 可以直接读取、编辑、创建这些文件。
 
 ---
 
-## 分类 1：coding（10 条）
+## 分类 1：coding（6 条）
 
 TypeScript 代码质量、Git 规范、依赖管理规则。
 **目录：** `~/.openoba/rules/coding/`
@@ -47,7 +47,7 @@ TypeScript 代码质量、Git 规范、依赖管理规则。
 
 ---
 
-## 分类 2：engineering（24 条）
+## 分类 2：engineering（12 条）
 
 工程纪律、质量门禁、工作流规范。
 **目录：** `~/.openoba/rules/engineering/`
@@ -97,80 +97,38 @@ TypeScript 代码质量、Git 规范、依赖管理规则。
 
 ---
 
-## 分类 4：testing（11 条）
+## 分类 4：testing（2 条）
 
-测试覆盖、质量门禁、TDD 流程。
+测试质量门禁。
 **目录：** `~/.openoba/rules/testing/`
 
 | # | 规则名 | 类型 | 触发条件 | 执行内容 | 修改指导 |
 |---|--------|------|---------|---------|---------|
-| 1 | `boundary_conditions_required` | CORRECT | 编写测试代码 | 提醒：测试覆盖边界 — null/undefined/空/0/负数/极大值。 | 添加领域特定边界条件。 |
-| 2 | `coverage_never_drops` | CORRECT | 编写测试代码 | 提醒：新增代码覆盖率不低于现有水平。只升不降。 | 设定数值阈值（如 ≥80%）。 |
-| 3 | `critical_path_full_coverage` | CORRECT | 编写测试代码 | 提醒：支付/登录/权限/删除等关键路径 100% 覆盖。 | 添加项目特定关键路径。 |
-| 4 | `no_behavior_without_test` | CORRECT | 编写测试代码 | 提醒：每个功能/修复/重构都要有测试。先写测试。 | 改为 `then: DENY` 强制 TDD。 |
-| 5 | `no_feature_on_broken_build` | CORRECT | 涉及 build/test 命令 | 提醒：不在 broken build 上加新功能。先修 build。 | 添加 CI 流水线检查引用。 |
-| 6 | `no_flaky_tests` | CORRECT | 测试中用 setTimeout/sleep/Math.random | 提醒：避免不确定行为。用 mock timer 和 seed。 | 添加 seed/mock 模式引用。 |
-| 7 | `no_implementation_coupled_tests` | ALLOW | 编写测试代码 | 提醒：测试验证行为，不验证实现。重构不破坏测试。 | 添加行为测试示例。 |
-| 8 | `no_tautological_tests` | CORRECT | 编写测试代码 | 提醒：避免"期望 mock 返回 mock 结果"。测试真实逻辑。 | 添加反模式示例。 |
-| 9 | `repro_before_fix` | CORRECT | 编写测试代码 | 提醒：RED（复现测试）→ GREEN（修复）→ REFACTOR。 | 改为 `DENY` 强制执行 TDD 顺序。 |
-| 10 | `test_as_documentation` | ALLOW | 编写测试代码 | 提醒：测试即文档。名称和断言应描述业务行为。 | 添加命名规范示例。 |
-| 11 | `test_audit_trail` | ALLOW | 编写测试代码 | 提醒：每个测试追溯到需求/Bug/Story。测试记录决策。 | 添加追溯格式。 |
+| 1 | `coverage_never_drops` | ALLOW | 修改测试相关代码 | 提醒：新增代码覆盖率不低于现有水平。只升不降。 | 设定数值阈值（如 ≥80%）。 |
+| 2 | `no_behavior_without_test` | ALLOW | 新增功能代码 | 提醒：每个功能/修复都要有测试。先写测试。 | 改为 `then: DENY` 强制 TDD。 |
 
 ---
 
-## 分类 5：performance（3 条）
+## 分类 5：observability（1 条）
 
-性能优化约束、数据库查询规范。
-**目录：** `~/.openoba/rules/performance/`
-
-| # | 规则名 | 类型 | 触发条件 | 执行内容 | 修改指导 |
-|---|--------|------|---------|---------|---------|
-| 1 | `measure_before_optimize` | ALLOW | 性能优化相关代码 | 提醒：先测量，再优化。没有 baseline = 猜测。 | 添加性能分析工具引用。 |
-| 2 | `no_n_plus_one` | CORRECT | 循环内有数据库查询 | 提醒：用 JOIN 或批量查询避免 N+1 问题。 | 添加 ORM 急加载模式。 |
-| 3 | `paginate_all_lists` | CORRECT | `findAll` 或 `SELECT *` 查询 | 提醒：列表查询必须分页。用 LIMIT + OFFSET。 | 设定默认每页条数。 |
-
----
-
-## 分类 6：observability（3 条）
-
-日志、监控、健康检查规范。
+日志安全规范。
 **目录：** `~/.openoba/rules/observability/`
 
 | # | 规则名 | 类型 | 触发条件 | 执行内容 | 修改指导 |
 |---|--------|------|---------|---------|---------|
-| 1 | `no_secrets_in_logs` | ALLOW | 日志含密码/Token/PII | 提醒：日志只输出 ID/hash。日志管道泄露 = 所有历史暴露。 | 添加 PII 字段清单。 |
-| 2 | `structured_logging` | CORRECT | 使用 console.log/日志库 | 提醒：用结构化 JSON 日志，含 timestamp/level/message/context。 | 添加日志格式 schema。 |
-| 3 | `health_check` | ALLOW | 任何代码/工程操作 | 提醒：所有服务需 /health 端点，返回 200 + 依赖状态。 | 添加 health check 模板。 |
+| 1 | `no_secrets_in_logs` | ALLOW | 修改日志相关代码 | 提醒：日志只输出 ID/hash，不泄露密钥/PII/PAT。 | 添加 PII 字段清单。 |
 
 ---
 
-## 分类 7：design（3 条）
+## 分类 6：writing（2 条）
 
-UI/UX、响应式设计、无障碍规范。
-**目录：** `~/.openoba/rules/design/`
-
-| # | 规则名 | 类型 | 触发条件 | 执行内容 | 修改指导 |
-|---|--------|------|---------|---------|---------|
-| 1 | `a11y_basics` | CORRECT | UI 代码含 aria/alt/role 属性 | 提醒：图片加 alt，交互元素加 aria，表单用 label。 | 添加 WCAG 级别要求。 |
-| 2 | `responsive_first` | CORRECT | 响应式/自适应 UI 代码 | 提醒：移动端优先。先写手机布局，@media 适配桌面。 | 添加断点定义。 |
-| 3 | `tailwind_first` | CORRECT | 使用 Tailwind/CSS 类 | 提醒：优先 Tailwind utility classes，不写内联 style。 | 添加设计系统 class 引用。 |
-
----
-
-## 分类 8：writing（7 条）
-
-语气、格式、清晰度、避免 AI 套话。
+语气、格式、避免 AI 套话。
 **目录：** `~/.openoba/rules/writing/`
 
 | # | 规则名 | 类型 | 触发条件 | 执行内容 | 修改指导 |
 |---|--------|------|---------|---------|---------|
-| 1 | `chinese_english_spacing` | CORRECT | 中文英文混排 | 提醒：中文和英文/数字之间加空格。 | 添加更多语言对规则。 |
-| 2 | `direct_tone` | CORRECT | 任何写作输出 | 提醒：直接精准，不绕弯。长话短说。 | 添加语气示例。 |
-| 3 | `heading_hierarchy` | ALLOW | 使用 markdown 标题 | 提醒：标题不跳级（H1→H3 无 H2）。 | 添加标题 checklist。 |
-| 4 | `list_consistency` | ALLOW | 使用 markdown 列表 | 提醒：列表内各项结构、标点保持一致。 | 添加列表格式示例。 |
-| 5 | `no_ai_jargon` | CORRECT | 使用 AI 套话（delve/unleash 等） | 提醒：避免 AI 填充词。用具体描述。 | 添加更多禁用词。 |
-| 6 | `no_cliche` | CORRECT | 使用商业空话（synergy/paradigm 等） | 提醒：避免空洞词汇。用具体语言。 | 添加行业专用禁用词。 |
-| 7 | `short_sentences` | ALLOW | 任何写作输出 | 提醒：用短句。一句一意。超 25 字考虑拆分。 | 调整句子长度阈值。 |
+| 1 | `direct_tone` | CORRECT | 任何写作输出 | 提醒：直接精准，不绕弯。长话短说。 | 添加语气示例。 |
+| 2 | `no_ai_jargon` | CORRECT | 使用 AI 套话（delve/unleash 等） | 提醒：避免 AI 填充词。用具体描述。 | 添加更多禁用词。 |
 
 ---
 

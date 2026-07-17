@@ -1,70 +1,90 @@
 # ERDL Agent Context Schema
 
-> ERDL Spec v1.1 上下文（σ）在 Agent 场景的标准字段定义
+> ERDL Spec v1.1 上下文在 Agent 场景的标准字段定义
 >
-> 所有字段均为 String 类型，由 Agent 在调用 `erdl_evaluate` 时填充。
+> Agent 在调用 `erdl_evaluate` 时传递 `tool_name` 和 `tool_args`，引擎自动构建 guard context。
 
 ---
 
-## 核心字段
+## 核心字段（由 ERDL 引擎自动构建）
 
-| 字段 | 类型 | 说明 | 示例值 |
-|------|------|------|--------|
-| `intent` | String | Agent 当前意图 | `write_code`, `git_commit`, `write_blog`, `add_dependency` |
-| `language` | String | 编程语言 / 自然语言 | `typescript`, `python`, `javascript`, `zh`, `en` |
-| `file` | String | 当前操作的文件名 | `app.ts`, `README.md`, `Button.vue` |
-| `framework` | String | 使用的框架 | `react`, `vue`, `nestjs`, `express` |
-| `platform` | String | 运行平台 | `web`, `node`, `mobile` |
-
-## 输出检查字段
-
-| 字段 | 类型 | 说明 | 示例值 |
-|------|------|------|--------|
-| `output_text` | String | Agent 即将输出的完整文本 | 代码块、文章内容、commit message 等 |
+| 字段 | 类型 | 来源 | 说明 |
+|------|------|------|------|
+| `tool.name` | String | `args.tool_name` | 被调用的工具名称 |
+| `tool.args` | Object | `args.tool_args` | 工具参数对象 |
+| `tool.args.<key>` | Any | `args.tool_args.<key>` | 扁平化后的参数字段 |
+| `agent.id` | String | `args.agent_id` (可选) | Agent 身份标识 |
+| `session.id` | String | `args.session_id` (可选) | 会话标识 |
 
 ## 字段使用规则
 
-1. **字段名遵循 Spec 标识符规范**：`[a-zA-Z_][a-zA-Z0-9_]*`，使用 `snake_case`
-2. **操作符遵循 Spec BNF**：`eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `not_in`, `contains`, `not_contains`, `match`, `exists`, `not_exists`
-3. **值类型**：String（引号包裹）、Number、Boolean、或数组 `("a", "b")`
-4. **逻辑连接**：`AND`, `OR`, `NOT`，`()` 分组
+1. **字段名遵循 Spec 标识符规范**：`[a-zA-Z_][a-zA-Z0-9_.]*`
+2. **操作符**：`eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`, `not_in`, `contains`, `not_contains`, `match`, `exists`, `not_exists`
+3. **值类型**：String、Number、Boolean、或数组
+4. **逻辑连接**：`AND`, `OR`，`()` 分组
 
-## ERDL When 表达式示例
+## ERDL When 条件示例
 
 ```yaml
-# TypeScript 类型安全
-when: language = "typescript" AND output_text contains "any"
+# 拦截 exec 工具调用（含危险命令）
+when:
+  logic: AND
+  conditions:
+    - field: "tool.name"
+      operator: eq
+      value: "exec"
+    - field: "tool.args.command"
+      operator: match
+      value: "rm -rf"
 
-# Git commit 格式
-when: intent = "git_commit" AND NOT output_text match "^feat|fix|docs|refactor"
+# 拦截写入含 any 类型的代码
+when:
+  logic: AND
+  conditions:
+    - field: "tool.name"
+      operator: in
+      value: ["write_file", "edit", "apply_patch"]
+    - field: "tool.args.content"
+      operator: match
+      value: "\\\\bany\\\\b"
 
-# 写作风格
-when: intent in ("write_blog", "write_content") AND output_text contains "在当今时代"
-
-# 依赖管理
-when: output_text contains "npm install" OR output_text contains "pip install"
-
-# 组件开发
-when: intent = "write_component" AND framework = "react"
+# 禁止 git stash
+when:
+  logic: AND
+  conditions:
+    - field: "tool.name"
+      operator: eq
+      value: "exec"
+    - field: "tool.args.command"
+      operator: match
+      value: "git stash"
 ```
 
-## 背景
+## 调用示例
 
-在 ERDL MCP Server 中，Agent 调用 `erdl_evaluate` 时传递上下文：
+Agent 调用 `erdl_evaluate` 时传递当前 Tool Call 参数：
 
 ```json
 {
-  "intent": "write_typescript_code",
-  "context": {
-    "language": "typescript",
-    "file": "utils.ts",
-    "output_text": "const data: any = fetch(url)"
+  "tool_name": "exec",
+  "tool_args": {
+    "command": "git stash push -m 'wip'"
   }
 }
 ```
 
-ERDL 规则解析 when 表达式并评估条件。匹配成功的规则返回 ALLOW（带指令）或 DENY（带原因）。
+ERDL 引擎自动构建 guard context 并评估所有规则：
+
+```
+{
+  "tool.name": "exec",
+  "tool.args.command": "git stash push -m 'wip'",
+  "tool.args": { "command": "git stash push -m 'wip'" }
+}
+```
+
+匹配成功的规则返回 ALLOW（带指令）或 DENY（带原因）。
 
 ---
 
-> OpenOBA · ERDL MCP Server · 2026-07-12
+> OpenOBA · ERDL MCP Server · 2026-07-17

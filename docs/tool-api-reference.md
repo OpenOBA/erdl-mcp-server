@@ -1,5 +1,7 @@
 # ERDL MCP Server — Tool API Reference
 
+> Version: 1.1.5 · 2026-07-17
+
 ## Overview
 
 ERDL MCP Server exposes 5 MCP tools. All tools use standard MCP `tools/call` protocol over stdio transport.
@@ -8,16 +10,18 @@ ERDL MCP Server exposes 5 MCP tools. All tools use standard MCP `tools/call` pro
 
 ## `erdl_evaluate`
 
-Evaluate a planned action against your rules before executing.
+Evaluate a planned tool call against loaded rules before execution.
 
-**When to call**: Before outputting code, writing content, adding dependencies, or creating UI.
+**When to call**: Before every tool call (exec, write_file, edit, web_search, etc).
 
 ### Input
 
 ```json
 {
-  "intent": "string — what you are about to do",
-  "context": "object — relevant context (file, language, platform, etc.)"
+  "tool_name": "string — name of the tool being called",
+  "tool_args": { "object — arguments being passed to the tool" },
+  "agent_id": "string (optional) — agent identity for audit",
+  "session_id": "string (optional) — session identifier for audit"
 }
 ```
 
@@ -25,9 +29,10 @@ Evaluate a planned action against your rules before executing.
 
 ```json
 {
-  "decision": "ALLOW | DENY | PASS",
-  "matchedRules": [{ "id": "TS-001", "name": "No any types", "instruction": "..." }],
-  "totalEvaluated": 20,
+  "decision": "ALLOW | DENY | CORRECT | REQUEST_HUMAN | EMERGENCY_HALT | PASS",
+  "badge": { "emoji": "🛑", "label": "ERDL Blocked" },
+  "matchedRules": [{ "id": "no_any", "name": "No any types", "decision": "DENY", "reason": "..." }],
+  "totalEvaluated": 37,
   "totalMatched": 3
 }
 ```
@@ -36,9 +41,12 @@ Evaluate a planned action against your rules before executing.
 
 | Decision | Meaning | Agent Action |
 |----------|---------|-------------|
-| `ALLOW` | Rule(s) matched, follow instructions | Execute with specified constraints |
-| `DENY` | Rule blocks this action | Present reason to user, do NOT proceed |
-| `PASS` | No rules matched | Use your best judgment |
+| `ALLOW` | Rule(s) matched with instructions | Execute, follow the instruction |
+| `DENY` | Rule blocks this action | Stop. Tell user what was blocked. |
+| `CORRECT` | Rule requires correction | Fix the request and retry. |
+| `REQUEST_HUMAN` | Human approval required | Ask user before proceeding. |
+| `EMERGENCY_HALT` | Critical rule triggered | Global halt, cannot bypass. |
+| `PASS` | No rules matched | Use best judgment. |
 
 ---
 
@@ -51,8 +59,7 @@ Test a potential rule against 3 scenarios BEFORE creating it.
 ```json
 {
   "ruleName": "string — proposed rule name",
-  "category": "coding | writing | design | custom",
-  "triggers": ["string"],
+  "category": "coding | engineering | writing | design | security | testing | performance | compliance | accessibility | custom",
   "keywords": ["string — keywords that trigger this rule"],
   "decision": "ALLOW | DENY",
   "instruction": "string — instruction or reason"
@@ -87,7 +94,7 @@ Create a new rule from natural language and save to `~/.openoba/rules/`.
 ```json
 {
   "naturalLanguage": "string — the rule in your own words",
-  "category": "coding | writing | design | custom",
+  "category": "coding | engineering | writing | design | security | testing | performance | compliance | accessibility | custom",
   "triggers": ["string"],
   "keywords": ["string"],
   "decision": "ALLOW | DENY",
@@ -116,7 +123,7 @@ List all currently loaded rules.
 
 ```json
 {
-  "category": "coding | writing | design | custom | all"
+  "category": "coding | engineering | writing | design | security | testing | performance | compliance | accessibility | custom | all"
 }
 ```
 
@@ -147,8 +154,8 @@ Show the full decision trail: which rules fired, which didn't, and why.
 
 ```json
 {
-  "intent": "string — the intent to explain",
-  "context": "object — same context used for evaluate"
+  "tool_name": "string — same tool name as used for erdl_evaluate",
+  "tool_args": { "object — same tool args as used for erdl_evaluate" }
 }
 ```
 
@@ -156,23 +163,23 @@ Show the full decision trail: which rules fired, which didn't, and why.
 
 ```json
 {
-  "intent": "write typescript code with any",
-  "decision": "DENY",
-  "totalChecked": 20,
+  "tool_name": "exec",
+  "decision": "ALLOW",
+  "totalChecked": 37,
   "matched": [
     {
-      "ruleId": "CO-001",
-      "ruleName": "No any types",
-      "category": "coding",
+      "ruleId": "no_dangerous_commands",
+      "ruleName": "No dangerous commands",
+      "category": "security",
       "matched": true,
       "decision": "DENY",
-      "conditionDetail": "intent contains any of: [any, typescript, .ts]"
+      "conditionDetail": "tool.name in [exec] AND tool.args.command match rm -rf"
     }
   ],
   "skipped": [
     {
-      "ruleId": "WR-001",
-      "ruleName": "No cliché openings",
+      "ruleId": "no_any",
+      "ruleName": "No any types",
       "matched": false
     }
   ]
@@ -226,4 +233,4 @@ Rules reload automatically on file save — no restart needed.
 
 ---
 
-> OpenOBA · ERDL MCP Server · 2026-07-12
+> OpenOBA · ERDL MCP Server · 2026-07-17
