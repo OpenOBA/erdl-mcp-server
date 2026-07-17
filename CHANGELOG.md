@@ -2,6 +2,22 @@
 
 All notable changes to ERDL MCP Server will be documented in this file.
 
+## [1.1.5] — 2026-07-17
+
+### Fixed (P0)
+- **rule-store.ts**: 删除 `loadBuiltinPresets()` 方法及其 CommonJS `require()` 调用 — ESM 运行时 `require is not defined` 导致 30 条内置规则静默加载失败（P0-1）
+- **rule-store.ts**: 内置规则改为从 npm 包自带的 `rules/` 目录（SPEC §5 YAML 文件）直接加载，与用户规则使用相同的 `loadFromDir()` 路径 — 无需 `src/presets/`（P0-2）
+- **rule-store.ts**: `load()` 日志改为分别显示 built-in 和 user 规则数量，便于诊断
+
+### Changed
+- 版本号 1.1.4 → 1.1.5
+
+### Verified
+- Build: 0 errors | Test: 44/44 pass
+- 运行时实测：30 built-in + 7 user = 37 rules 正常加载
+- 不再出现 "Built-in presets skipped: require is not defined"
+- Plugin + standalone MCP Server 均走同一加载路径
+
 ## [1.1.4] — 2026-07-14
 
 ### Fixed
