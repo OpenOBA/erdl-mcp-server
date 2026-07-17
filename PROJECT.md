@@ -1,7 +1,7 @@
 # ERDL MCP Server — Project Overview & Tracking Document
 
-> **Owner:** OpenOBA · **License:** MIT · **Status:** Active (v1.1.3)
-> **Created:** 2026-07-07 · **Last Updated:** 2026-07-12
+> **Owner:** OpenOBA · **License:** MIT · **Status:** Active (v1.1.5)
+> **Created:** 2026-07-07 · **Last Updated:** 2026-07-17
 > **Repository:** [github.com/OpenOBA/erdl-mcp-server](https://github.com/OpenOBA/erdl-mcp-server)
 > **npm:** [@openoba-ai/erdl-mcp](https://www.npmjs.com/package/@openoba-ai/erdl-mcp)
 
@@ -21,13 +21,13 @@ ERDL MCP Server is a **Model Context Protocol (MCP) server** that gives AI Agent
 
 | Item | Value |
 |------|-------|
-| **Current version** | `1.1.3` |
+| **Current version** | `1.1.5` |
 | **npm package** | `@openoba-ai/erdl-mcp` |
 | **GitHub** | `OpenOBA/erdl-mcp-server` |
 | **License** | MIT |
 | **Node.js** | >= 18 |
 | **Dependencies** | `@modelcontextprotocol/sdk`, `js-yaml` |
-| **Total npm versions** | 17 (alpha → 1.1.3) |
+| **Total npm versions** | 18 (alpha → 1.1.5) |
 | **Old versions** | All < 1.1.0 deprecated |
 
 ---
@@ -53,15 +53,13 @@ erdl-mcp-server/
 │   │   ├── list-rules.ts     # erdl_list_rules — list/filter loaded rules
 │   │   └── explain.ts        # erdl_explain — full decision trail
 │   └── presets/              # (DELETED in v1.1.0 — migrated to YAML files)
-├── rules/                    # 30 .erdl.yaml files across 8 categories
-│   ├── coding/       (10)    # TypeScript quality, Git discipline
-│   ├── engineering/  (24)    # Workflow discipline, pipeline gates
-│   ├── security/     (6)     # Vulnerability prevention (3 Guards)
-│   ├── testing/      (11)    # Coverage, quality gates
-│   ├── performance/  (3)     # N+1, pagination
-│   ├── observability/(3)     # Logging, health checks
-│   ├── design/       (3)     # a11y, responsive, Tailwind
-│   └── writing/      (7)     # Tone, formatting, no cliches
+├── rules/                    # 30 .erdl.yaml files across 6 categories
+│   ├── engineering/  (13)    # Workflow discipline, pipeline gates, no shortcuts, self-verify
+│   ├── coding/       (6)     # TypeScript quality: no any, no ts-ignore, naming conventions
+│   ├── security/     (6)     # No eval with input, no hardcoded secrets, no string SQL
+│   ├── testing/      (2)     # Coverage never drops, no behavior without test
+│   ├── writing/      (2)     # Direct tone, no AI jargon
+│   └── observability/(1)     # No secrets in logs
 ├── test/
 │   ├── engine/
 │   │   ├── expression.test.ts (23 tests)
@@ -112,8 +110,8 @@ erdl-mcp-server/
 | Build errors | 0 |
 | Unit tests | 44 (23 expression + 21 evaluator) |
 | Test pass rate | 100% |
-| Guard rules | 6 (Ring 0, DENY — hard intercept) |
-| Advisory rules | 61 (Ring 3, ALLOW/CORRECT) |
+| Guard rules | 9 (Ring 0, DENY/EMERGENCY_HALT — hard intercept) |
+| Advisory rules | 21 (Ring 3, ALLOW/CORRECT/REQUEST_HUMAN) |
 | Guard coverage | 12/12 scenarios verified |
 | Empty conditions | 0 |
 | Placeholder messages | 0 |
@@ -149,18 +147,22 @@ erdl-mcp-server/
 
 ## 8. Roadmap (Future)
 
-### P0 — Short Term (Next Release)
+### P0 — Completed / In Progress
 
 | Task | Notes |
 |------|-------|
-| GitHub Actions CI | Already configured in repo, verify activation |
-| npm downloads badge | Track adoption |
-| Community feedback loop | GitHub Issues + Discussions monitoring |
+| ✅ Fix built-in rule loading (ESM require) | v1.1.5 — rules/ YAML dir replaces presets/ |
+| ✅ Rich Markdown output for evaluate + explain | v1.1.5 — user-facing rule engine visibility |
+| ✅ Remove `--pro-key` dead CLI flag | v1.1.5 — removed from help/docs |
+| ⬜ HTTP/SSE transport | P1-4 — enable cloud Agent access |
+| ⬜ 5 tool integration tests | P1-2 — test/tools/ is empty |
 
 ### P1 — Medium Term
 
 | Task | Notes |
 |------|-------|
+| MCP Progress Notification | Protocol-layer progress for evaluate tool |
+| Resources layer expansion | `erdl://rules/hot`, `erdl://rules/recent` |
 | `within` time window operator | SPEC §3.3 — detect patterns over time intervals |
 | `rate` rate limiting operator | SPEC §3.3 — limit tool call frequency |
 | Complete Execution Rings 0-3 | Implement QUARANTINE, ROLLBACK, ESCALATE (Pro tier) |
@@ -176,6 +178,7 @@ erdl-mcp-server/
 | Agent BOM (Bill of Materials) | SPEC §4.2 (Enterprise tier) |
 | LangChain / CrewAI / AutoGen adapters | Framework integrations |
 | Rule Registry (global view) | Conflict detection, coverage analysis |
+| China dev scenario rule pack | Alibaba Java, Huawei C++, MIIT AI code standards |
 
 ---
 
@@ -184,10 +187,13 @@ erdl-mcp-server/
 ### Release Process
 - [ ] Verify: `npm run build` — 0 errors
 - [ ] Verify: `npm test` — 44/44 passed
-- [ ] Verify: `node review.cjs` — 12/12 guard scenarios
+- [ ] Verify: `npm run typecheck` — 0 errors
+- [ ] Verify: runtime smoke test (node -e import RuleStore → 30 built-in rules)
 - [ ] Verify: private content audit on all .md + .erdl.yaml
 - [ ] Bump version in `package.json`
 - [ ] Update `CHANGELOG.md`
+- [ ] Locate latest npm version: `npm view @openoba-ai/erdl-mcp version`
+- [ ] Verify version is higher than latest published
 - [ ] `git push origin master`
 - [ ] `npm publish`
 
@@ -218,4 +224,4 @@ erdl-mcp-server/
 ---
 
 > *Deterministic architecture, not prompt engineering.*
-> *OpenOBA · ERDL MCP Server · 2026-07-12*
+> *OpenOBA · ERDL MCP Server · 2026-07-17*

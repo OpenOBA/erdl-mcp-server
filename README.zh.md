@@ -9,7 +9,9 @@
 
 > 📖 [English](./README.md)
 
-ERDL（Entity-Rule Definition Language，实体-规则定义语言）为你的 AI Agent 提供确定性规则执行。30 条内置规则覆盖 8 大类别。无限条个人规则。**永久免费。**
+ERDL（Entity-Rule Definition Language，实体-规则定义语言）为你的 AI Agent 提供确定性规则执行。30 条内置规则覆盖 6 大类别。无限条个人规则。**永久免费。**
+
+> 🆕 v1.1.5 — 富 Markdown 输出实现用户可感知的规则引擎 + P0 修复：30 条内置规则现已正确加载
 
 ---
 
@@ -89,18 +91,16 @@ ERDL 规则不"建议"。不"希望"。**强制执行。**
 
 ## 包含内容
 
-### 30 条内置规则（8 大类别）
+### 30 条内置规则（6 大类别）
 
 | 类别 | 规则数 | 覆盖范围 |
 |----------|:---:|-------|
-| `coding`（编码） | 10 | TypeScript 质量、Git 规范、依赖管理 |
-| `engineering`（工程） | 24 | 工作流规范、流水线门禁、会话记忆、自验证 |
-| `writing`（写作） | 7 | 语气、格式、简洁 |
-| `design`（设计） | 3 | Tailwind 优先、响应式、无障碍 |
-| `security`（安全） | 6 | SQL 注入、eval、硬编码密钥、输入校验 |
-| `testing`（测试） | 11 | 覆盖率、边界条件、不稳定测试、TDD 流程 |
-| `performance`（性能） | 3 | N+1 查询、分页、先测量再优化 |
-| `observability`（可观测性） | 3 | 结构化日志、健康检查、日志不泄露密钥 |
+| `engineering`（工程） | 13 | 工作流规范、流水线门禁、杜绝走捷径、自验证、决策日志 |
+| `coding`（编码） | 6 | TypeScript 质量：禁用 `any`、禁用 `@ts-ignore`、命名规范、依赖管理 |
+| `security`（安全） | 6 | 禁用 eval 注入、禁用硬编码密钥、禁用 SQL 拼接、校验所有输入、安全 Header |
+| `testing`（测试） | 2 | 覆盖率不下降、无测试不新增行为 |
+| `writing`（写作） | 2 | 直接语气、禁用 AI 套话 |
+| `observability`（可观测性） | 1 | 日志不泄露密钥 |
 
 ### 5 个 MCP 工具
 
@@ -215,10 +215,10 @@ rules:
 ```bash
 npx @openoba-ai/erdl-mcp@latest          # 启动 MCP Server（始终最新版）
 npx @openoba-ai/erdl-mcp@latest --lang zh # 中文模式
-npx @openoba-ai/erdl-mcp@latest --pro-key sk-xxx  # 激活 Pro License
 npx @openoba-ai/erdl-mcp@latest --upgrade  # 升级至最新版
 npx @openoba-ai/erdl-mcp@latest --uninstall  # 干净卸载
 npx @openoba-ai/erdl-mcp@latest --help     # 完整使用说明
+npx @openoba-ai/erdl-mcp@latest --setup    # 显示 MCP 客户端配置
 ```
 
 > **从 v1.0.x 升级？**必须更新 MCP 配置：

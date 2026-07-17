@@ -209,6 +209,7 @@ function buildExplainMarkdown(
   return md
 }
 
+// Note: DECISION_BADGE is also defined in evaluate.ts; keep in sync
 const DECISION_BADGE: Record<string, string> = {
   DENY: '🛑',
   EMERGENCY_HALT: '🚨',

@@ -11,6 +11,8 @@
 
 ERDL (Entity-Rule Definition Language) gives your Agent deterministic rules. 30 built-in rules across 6 categories. Unlimited personal rules. **Free forever.**
 
+> 🆕 v1.1.5 — Rich Markdown output for full user-facing visibility + P0 fix: 30 built-in rules now load correctly
+
 ---
 
 ## Why ERDL?
@@ -92,18 +94,16 @@ ERDL rules don't suggest. They don't hope. They **enforce**.
 
 ## What's Included
 
-### 30 Built-in Rules (8 Categories)
+### 30 Built-in Rules (6 Categories)
 
 | Category | Rules | Scope |
 |----------|:-----:|-------|
-| `coding` | 10 | TypeScript quality, Git discipline, dependency hygiene |
-| `engineering` | 24 | Workflow discipline, pipeline gates, session memory, self-verify |
-| `writing` | 7 | Tone, formatting, clarity |
-| `design` | 3 | Tailwind-first, responsive, accessible |
-| `security` | 6 | SQL injection, eval, hardcoded secrets, input validation |
-| `testing` | 11 | Coverage, boundary conditions, flaky tests, TDD workflow |
-| `performance` | 3 | N+1 queries, pagination, measure before optimize |
-| `observability` | 3 | Structured logging, health checks, no secrets in logs |
+| `engineering` | 13 | Workflow discipline, pipeline gates, no shortcuts, self-verify, decision logging |
+| `coding` | 6 | TypeScript quality: no `any`, no `@ts-ignore`, naming conventions, dependency hygiene |
+| `security` | 6 | No eval with input, no hardcoded secrets, no string SQL, validate all input, security headers |
+| `testing` | 2 | Coverage never drops, no behavior without test |
+| `writing` | 2 | Direct tone, no AI jargon |
+| `observability` | 1 | No secrets in logs |
 
 ### 5 MCP Tools
 
@@ -218,10 +218,10 @@ rules:
 ```bash
 npx @openoba-ai/erdl-mcp@latest          # Start MCP server (always latest)
 npx @openoba-ai/erdl-mcp@latest --lang zh # Chinese mode
-npx @openoba-ai/erdl-mcp@latest --pro-key sk-xxx  # Activate Pro license
 npx @openoba-ai/erdl-mcp@latest --upgrade  # Upgrade to latest
 npx @openoba-ai/erdl-mcp@latest --uninstall  # Clean removal
 npx @openoba-ai/erdl-mcp@latest --help     # Full usage
+npx @openoba-ai/erdl-mcp@latest --setup    # Show MCP client config
 ```
 
 > **Upgrading from v1.0.x?** You MUST update your MCP config:

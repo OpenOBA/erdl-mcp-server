@@ -66,7 +66,6 @@ function showHelp(): void {
 Usage:
   npx ${PKG_NAME}               Start the MCP server (stdio transport)
   npx ${PKG_NAME} --lang zh     Chinese mode
-  npx ${PKG_NAME} --pro-key sk-xxx  Activate Pro license
   npx ${PKG_NAME} --version     Show version
   npx ${PKG_NAME} --help        Show this help
   npx ${PKG_NAME} --upgrade     Upgrade to the latest version
