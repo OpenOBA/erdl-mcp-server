@@ -9,6 +9,14 @@ All notable changes to ERDL MCP Server will be documented in this file.
 - **rule-store.ts**: 内置规则改为从 npm 包自带的 `rules/` 目录（SPEC §5 YAML 文件）直接加载，与用户规则使用相同的 `loadFromDir()` 路径 — 无需 `src/presets/`（P0-2）
 - **rule-store.ts**: `load()` 日志改为分别显示 built-in 和 user 规则数量，便于诊断
 
+### Added
+- **evaluate.ts**: 所有决策分支返回富 Markdown 替代单行纯文本 — LLM 将自然向用户转述规则引擎的存在和决策理由
+  - 6 种决策类型各有独立 Markdown 构建函数：DENY/HALT/REQUEST_HUMAN/CORRECT/ALLOW/PASS
+  - DENY 包含规则名、拦截原因、双语解释（explanation）、替代方案（alternative）
+  - ALLOW/PASS 明确展示已检查规则数，用户可见"ERDL 引擎已检查"
+  - 每类输出末尾提示可调用 `erdl_explain` 查看完整链路
+- **explain.ts**: 决策链路增强 — 按 decision 分组展示、条件中文可读化（`=` `≠` `包含`）、补充 explanation/alternative/ring 信息
+
 ### Changed
 - 版本号 1.1.4 → 1.1.5
 
@@ -17,6 +25,7 @@ All notable changes to ERDL MCP Server will be documented in this file.
 - 运行时实测：30 built-in + 7 user = 37 rules 正常加载
 - 不再出现 "Built-in presets skipped: require is not defined"
 - Plugin + standalone MCP Server 均走同一加载路径
+- 富 Markdown 输出在 DENY/ALLOW/PASS/EXPLAIN 场景均正常渲染
 
 ## [1.1.4] — 2026-07-14
 
